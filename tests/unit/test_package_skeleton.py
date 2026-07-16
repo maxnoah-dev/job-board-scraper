@@ -18,7 +18,6 @@ from pathlib import Path
 
 import pytest
 
-
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 PACKAGE_ROOT = PROJECT_ROOT / "src" / "job_board_scraper"
 
@@ -90,8 +89,14 @@ _ALLOWED_IMPORTS: set[tuple[str, str]] = {
     ("job_board_scraper.core.database", "job_board_scraper.models.company"),
     ("job_board_scraper.core.database", "job_board_scraper.models.job"),
     ("job_board_scraper.repositories.job_repository", "job_board_scraper.models.job"),
-    ("job_board_scraper.repositories.company_repository", "job_board_scraper.models.company"),
-    ("job_board_scraper.repositories.scrape_log_repository", "job_board_scraper.models.scrape_log"),
+    (
+        "job_board_scraper.repositories.company_repository",
+        "job_board_scraper.models.company",
+    ),
+    (
+        "job_board_scraper.repositories.scrape_log_repository",
+        "job_board_scraper.models.scrape_log",
+    ),
     ("job_board_scraper.scheduler.scheduler", "job_board_scraper.core.logging"),
     ("job_board_scraper.cli", "job_board_scraper.etl"),
 }

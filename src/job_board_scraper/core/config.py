@@ -12,7 +12,6 @@ used throughout the application.
 from __future__ import annotations
 
 from pathlib import Path
-from typing import ClassVar
 
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -149,9 +148,7 @@ class AppSettings(BaseSettings):
         # Validate LOG_LEVEL
         valid_levels = {"DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"}
         if self.LOG_LEVEL.upper() not in valid_levels:
-            raise ValueError(
-                f"LOG_LEVEL={self.LOG_LEVEL!r} not in {valid_levels}"
-            )
+            raise ValueError(f"LOG_LEVEL={self.LOG_LEVEL!r} not in {valid_levels}")
 
         # Validate DELAY_MIN <= DELAY_MAX
         if self.REQUEST_DELAY_MIN > self.REQUEST_DELAY_MAX:

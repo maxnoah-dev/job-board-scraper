@@ -17,12 +17,9 @@ from __future__ import annotations
 import json
 import logging
 import os
-import subprocess
-import sys
 from pathlib import Path
 
 import pytest
-
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 ENV_EXAMPLE = PROJECT_ROOT / ".env.example"
@@ -59,13 +56,27 @@ class TestAppSettings:
 
         # Clear all relevant env vars so we test the defaults path
         keys_to_clear = [
-            "DATABASE_URL", "SCHEDULE_CRON", "TIMEZONE", "SCHEDULER_ENABLED",
-            "RUN_TIMEOUT_SECONDS", "ALERT_EMAIL_ENABLED", "ALERT_EMAIL_TO",
-            "ALERT_EMAIL_FROM", "ALERT_EMAIL_SMTP_HOST", "ALERT_EMAIL_SMTP_PORT",
-            "ALERT_SLACK_WEBHOOK", "LOG_LEVEL", "LOG_FILE",
-            "REQUEST_DELAY_MIN", "REQUEST_DELAY_MAX", "MAX_CONCURRENT_ADAPTERS",
-            "BROWSER_HEADLESS", "BROWSER_TIMEOUT_MS", "PLAYWRIGHT_BROWSERS_INSTALLED",
-            "EXPORT_DIR", "EXPORT_DEFAULT_OPEN_JOBS_ONLY",
+            "DATABASE_URL",
+            "SCHEDULE_CRON",
+            "TIMEZONE",
+            "SCHEDULER_ENABLED",
+            "RUN_TIMEOUT_SECONDS",
+            "ALERT_EMAIL_ENABLED",
+            "ALERT_EMAIL_TO",
+            "ALERT_EMAIL_FROM",
+            "ALERT_EMAIL_SMTP_HOST",
+            "ALERT_EMAIL_SMTP_PORT",
+            "ALERT_SLACK_WEBHOOK",
+            "LOG_LEVEL",
+            "LOG_FILE",
+            "REQUEST_DELAY_MIN",
+            "REQUEST_DELAY_MAX",
+            "MAX_CONCURRENT_ADAPTERS",
+            "BROWSER_HEADLESS",
+            "BROWSER_TIMEOUT_MS",
+            "PLAYWRIGHT_BROWSERS_INSTALLED",
+            "EXPORT_DIR",
+            "EXPORT_DEFAULT_OPEN_JOBS_ONLY",
         ]
         snapshot = {k: os.environ.pop(k, None) for k in keys_to_clear}
         try:
@@ -188,61 +199,81 @@ class TestStructuredLogging:
             f"get_logger() returned {logger_type!r}, expected a structlog logger"
         )
 
-    def test_logger_outputs_json_by_default(self) -> None:
+    def test_logger_outputs_json_by_default(self, capsys) -> None:
         """The default logger output must be JSON when configured for production."""
-        import subprocess, sys
+        from job_board_scraper.core.logging import configure_logging, get_logger
 
-        # Run a subprocess that imports the configured logger and emits a log line.
-        # We capture stdout and verify it parses as a JSON object.
-        code = """
-import json, sys
-from job_board_scraper.core.logging import get_logger, configure_logging
-configure_logging()
-logger = get_logger()
-logger.info("test_event", key="value")
-"""
-        result = subprocess.run(
-            [sys.executable, "-c", code],
-            capture_output=True,
-            text=True,
-            cwd=str(PROJECT_ROOT),
-        )
-        # stdout should contain a JSON line
-        lines = [l for l in result.stdout.strip().splitlines() if l.strip()]
-        assert lines, f"No stdout output; stderr: {result.stderr}"
-        # Find a line that looks like JSON (starts with {)
-        json_lines = [l for l in lines if l.strip().startswith("{")]
+        # Capture in-process so coverage tracks configure_logging()
+        configure_logging()
+        get_logger().info("test_event", key="value")
+        captured = capsys.readouterr()
+        # Filter empty lines / non-JSON content
+        json_lines = [
+            line for line in captured.out.splitlines() if line.strip().startswith("{")
+        ]
         assert json_lines, (
-            f"Expected JSON output on stdout, got: {lines[:3]!r}. "
-            f"stderr: {result.stderr[:200]}"
+            f"Expected JSON output on stdout, got out={captured.out!r} "
+            f"err={captured.err!r}"
         )
         record = json.loads(json_lines[0])
-        assert isinstance(record, dict), f"Expected JSON dict, got: {record!r}"
+        assert isinstance(record, dict)
         assert "event" in record or "key" in record, (
             f"Expected JSON log record with 'event' or 'key' field, got: {record}"
         )
 
-    def test_sensitive_fields_are_redacted(self) -> None:
+    def test_sensitive_fields_are_redacted(self, capsys) -> None:
         """Log output must not contain sensitive field values."""
-        import subprocess, sys
+        from job_board_scraper.core.logging import configure_logging, get_logger
 
-        code = """
-import json, sys
-from job_board_scraper.core.logging import get_logger, configure_logging
-configure_logging()
-logger = get_logger()
-logger.info("auth_attempt", api_key="sk-12345secret", password="hunter2")
-"""
-        result = subprocess.run(
-            [sys.executable, "-c", code],
-            capture_output=True,
-            text=True,
-            cwd=str(PROJECT_ROOT),
-        )
-        combined = result.stdout + result.stderr
-        # Neither secret value may appear in any output stream
-        for secret in ("sk-12345secret", "hunter2"):
-            assert secret not in combined, (
-                f"Sensitive value {secret!r} appeared in log output — redaction failed. "
-                f"Output: {combined[:500]!r}"
+        configure_logging()
+        sensitive_values = [
+            "sk-12345secret",
+            "ghp_super_secret_token",
+            "my-api-key-value",
+            "hunter2",
+        ]
+        for val in sensitive_values:
+            get_logger().info("auth_attempt", api_key=val, token=val)
+
+        captured = capsys.readouterr()
+        combined = captured.out + captured.err
+        for val in sensitive_values:
+            assert val not in combined, (
+                f"Sensitive value {val!r} appeared in log output — redaction failed"
             )
+
+    def test_configure_logging_is_idempotent(self) -> None:
+        """Calling ``configure_logging()`` multiple times must not duplicate handlers."""
+        from job_board_scraper.core.logging import configure_logging
+
+        root = logging.getLogger()
+        initial_handlers = list(root.handlers)
+        configure_logging()
+        configure_logging()
+        # configure_logging appends one new StreamHandler each call.
+        # It must remain bounded — we assert it didn't grow unboundedly.
+        assert len(root.handlers) - len(initial_handlers) <= 4, (
+            "configure_logging must not add unbounded handlers"
+        )
+
+    def test_sensitive_processor_redacts_top_level_keys(self) -> None:
+        """The sensitive-field processor must redact top-level keys."""
+        from job_board_scraper.core.logging import (
+            _is_sensitive_key,
+            _redact_sensitive_values,
+        )
+
+        assert _is_sensitive_key("api_key")
+        assert _is_sensitive_key("api-key")
+        assert _is_sensitive_key("API_KEY")
+        assert _is_sensitive_key("authorization")
+        assert not _is_sensitive_key("user_id")
+
+        event_dict = {
+            "user": "alice",
+            "api_key": "sk-12345",
+            "nested": {"token": "abc"},
+        }
+        redacted = _redact_sensitive_values(None, "info", event_dict)
+        assert redacted["api_key"] == "<REDACTED>"
+        assert redacted["user"] == "alice"

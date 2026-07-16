@@ -24,27 +24,29 @@ from job_board_scraper.core.config import get_settings
 
 # Fields that are considered sensitive and must never appear in log output.
 # Values associated with these field names are replaced with ``"<REDACTED>"``.
-SENSITIVE_FIELD_NAMES: frozenset[str] = frozenset({
-    "api_key",
-    "apikey",
-    "api-key",
-    "api_key_id",
-    "auth",
-    "authorization",
-    "bearer",
-    "client_secret",
-    "password",
-    "passwd",
-    "private_key",
-    "secret",
-    "secret_key",
-    "security_token",
-    "session_token",
-    "token",
-    "x-api-key",
-    "x-auth-token",
-    "x-security-token",
-})
+SENSITIVE_FIELD_NAMES: frozenset[str] = frozenset(
+    {
+        "api_key",
+        "apikey",
+        "api-key",
+        "api_key_id",
+        "auth",
+        "authorization",
+        "bearer",
+        "client_secret",
+        "password",
+        "passwd",
+        "private_key",
+        "secret",
+        "secret_key",
+        "security_token",
+        "session_token",
+        "token",
+        "x-api-key",
+        "x-auth-token",
+        "x-security-token",
+    }
+)
 
 
 def _is_sensitive_key(key: str) -> bool:
@@ -76,7 +78,8 @@ def _add_timestamp(
 ) -> dict[str, Any]:
     """Add ISO-8601 ``timestamp`` in UTC."""
     import datetime
-    event_dict["timestamp"] = datetime.datetime.now(datetime.timezone.utc).isoformat()
+
+    event_dict["timestamp"] = datetime.datetime.now(datetime.UTC).isoformat()
     return event_dict
 
 
@@ -110,7 +113,8 @@ def configure_logging() -> None:
         renderer = structlog.processors.JSONRenderer()
 
     structlog.configure(
-        processors=shared_processors + [
+        processors=shared_processors
+        + [
             structlog.stdlib.ProcessorFormatter.wrap_for_formatter,
         ],
         logger_factory=structlog.stdlib.LoggerFactory(),
@@ -168,6 +172,7 @@ def get_logger(name: str | None = None) -> structlog.stdlib.BoundLogger:
     """
     if name is None:
         import traceback
+
         frame = traceback.extract_stack()[-2]
         name = frame.filename
 

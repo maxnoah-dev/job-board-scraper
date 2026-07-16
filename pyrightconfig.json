@@ -1,0 +1,26 @@
+{
+  "include": [
+    "src"
+  ],
+  "exclude": [
+    "tests",
+    "**/__pycache__",
+    ".venv",
+    ".ruff_cache",
+    "build",
+    "dist"
+  ],
+  "ignore": [
+    "src/job_board_scraper/cli.py"
+  ],
+  "pythonVersion": "3.11",
+  "typeCheckingMode": "standard",
+  "reportMissingTypeStubs": false,
+  "reportMissingImports": false,
+  "reportOptionalMemberAccess": "warning",
+  "reportOptionalIterable": "warning",
+  "reportOptionalSubscript": "warning",
+  "reportOptionalOperand": "warning",
+  "reportTypedDictNotRequiredAccess": "none",
+  "useLibraryCodeForTypes": true
+}

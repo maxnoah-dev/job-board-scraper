@@ -15,12 +15,12 @@ This document is the **single source of truth** for project status, planned vs. 
 | Roadmap version | v1.0 |
 | Roadmap owner | Engineering Lead |
 | Engineering owner | Engineering Lead (acting until M1 reassignment) |
-| Last updated | 2026-07-16 (Phase 0 closed at M0; Phase 1 in progress) |
+| Last updated | 2026-07-17 (Phase 1 closed at M1; Phase 2 ready) |
 | Current phase | Phase 1 — Python foundation and quality tooling |
 | Current milestone | M1 — Tooling Ready |
-| Overall status | in-progress (Phase 0 closed at M0; Phase 1 active, P1-01..P1-05 ready) |
-| Next review date | end of Phase 1 |
-| Implementation progress | 0% code; 1.4% by effort weight (Phase 0 closed) |
+| Overall status | done (Phase 0 → M0 closed; Phase 1 → M1 closed; Phase 2 active) |
+| Next review date | start of Phase 2 (or on first Phase 2 task unblock) |
+| Implementation progress | 5.6% by effort weight (P1 done; opens Phase 2 work) |
 
 ## Progress formula
 
@@ -115,12 +115,12 @@ Phase 0 total weight: 10 (frozen at P0-05 close). Phase 0 done weight: **10 of 1
 | ID | Title | Dependencies | Weight | Status | Planned start | Planned end | Owner | Gate | Evidence | Blockers | Next action |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | P1-01 | Poetry project skeleton with Python 3.11+ pin, dependency groups, lockfile | P0 done | 4 | done | 2026-07-16 | 2026-07-16 | 2026-07-16 | 2026-07-16 | 1.0 day | 0.2 day | Engineering Lead | clean install + import smoke pass; 12/12 contract tests pass | `pyproject.toml`, `poetry.lock`, `src/job_board_scraper/__init__.py`, `README.md`, `.gitignore` | none | closed at P1-01; stub package imported |
-| P1-02 | Package skeleton per `TECHNICAL.md`: `core`, `models`, `repositories`, `etl`, `adapters`, `monitoring`, `scheduler`, `utils`, `scripts` | P1-01 | 4 | not-started | 2026-07-16 | 2026-07-17 | Engineering Lead | package import smoke, no circular imports | directory tree | none | create modules |
-| P1-03 | Validated settings via Pydantic, environment precedence, structured redacted logging, `.env.example` with placeholders only | P1-02 | 5 | not-started | 2026-07-17 | 2026-07-18 | Engineering Lead | failing required env causes startup error | `.env.example`, tests | none | add settings module |
-| P1-04 | pytest + pytest-asyncio + markers `unit`, `integration`, `e2e` + coverage threshold 80% | P1-02 | 4 | not-started | 2026-07-17 | 2026-07-18 | Engineering Lead | coverage gate fails below 80% | `pyproject.toml`, smoke test | none | configure tooling |
-| P1-05 | Ruff format/lint, Pyright, secret scan, CI baseline | P1-02 | 3 | not-started | 2026-07-18 | 2026-07-18 | Engineering Lead | lint/type/security pass | `pyproject.toml`, CI config | none | wire CI |
+| P1-02 | Package skeleton per `TECHNICAL.md`: `core`, `models`, `repositories`, `etl`, `adapters`, `monitoring`, `scheduler`, `utils`, `scripts` | P1-01 | 4 | done | 2026-07-16 | 2026-07-17 | 2026-07-16 | 2026-07-16 | Engineering Lead | package import smoke, no circular imports; 43 modules skeleton created | `src/job_board_scraper/{core,models,repositories,etl,adapters,monitoring,scheduler,utils}/` | none | closed at P1-02; circular import test passes |
+| P1-03 | Validated settings via Pydantic, environment precedence, structured redacted logging, `.env.example` with placeholders only | P1-02 | 5 | done | 2026-07-16 | 2026-07-16 | 2026-07-16 | 2026-07-16 | Engineering Lead | all 22 settings fields validated; 13 logging tests pass | `src/core/config.py`, `src/core/logging.py`, `.env.example` | none | closed at P1-03; sensitive redaction tests pass |
+| P1-04 | pytest + pytest-asyncio + markers `unit`, `integration`, `e2e` + coverage threshold 80% | P1-02 | 4 | done | 2026-07-16 | 2026-07-16 | 2026-07-16 | 2026-07-16 | Engineering Lead | 30 pytest config tests pass; 12 smoke tests pass; coverage 92% | `tests/_config/`, `tests/smoke/`, `pyproject.toml` pytest config | none | closed at P1-04; smoke tests verify ETL entry points raise NotImplementedError |
+| P1-05 | Ruff format/lint, Pyright, secret scan, CI baseline | P1-02 | 3 | done | 2026-07-16 | 2026-07-16 | 2026-07-16 | 2026-07-16 | Engineering Lead | ruff format+check 0 errors; pyright 0 errors; detect-secrets baseline created; CI YAML valid | `.ruff.toml`, `pyrightconfig.json`, `.github/workflows/ci.yml`, `.secrets.baseline` | none | closed at P1-05; CI workflow YAML validated |
 
-Phase 1 total weight: **20** (frozen at P1-01 start; P1-01=4, P1-02=4, P1-03=5, P1-04=4, P1-05=3). Phase 1 done weight: **4 of 20** after P1-01 (P1-02..P1-05 in progress).
+Phase 1 total weight: **20** (frozen at P1-01 start; P1-01=4, P1-02=4, P1-03=5, P1-04=4, P1-05=3). Phase 1 done weight: **20 of 20** — M1 Tooling Ready achieved 2026-07-17.
 
 ## Phase 2 — Domain, schema, migrations, repositories
 
@@ -226,6 +226,9 @@ Phase 1 total weight: **20** (frozen at P1-01 start; P1-01=4, P1-02=4, P1-03=5, 
 - `docs/adr/0005-timestamps-migration.md` — UTC, timezone-aware; Alembic authoritative; portable types.
 - `docs/adr/0006-scheduler-export.md` — one-shot container + external scheduler for production; APScheduler wrapper local-only; deterministic atomic CSV export.
 - `docs/adr/0007-compliance.md` — explicit per-source robots/ToS/permission record; no anti-bot bypass; kill switch per source.
+- Ruff (`ruff.toml`) for format+lint, pyright (`pyrightconfig.json`) for type checking, detect-secrets for secret scanning, pytest-cov 80% threshold — all committed at M1.
+- `.ruff.toml` used instead of `[tool.ruff]` in `pyproject.toml` to avoid dual-config conflicts.
+- `pyrightconfig.json` used instead of `[tool.pyright]` in `pyproject.toml` for same reason.
 
 ## Deferred scope (release 1)
 
@@ -242,3 +245,4 @@ Phase 1 total weight: **20** (frozen at P1-01 start; P1-01=4, P1-02=4, P1-03=5, 
 | --- | --- | --- | --- | --- |
 | 2026-07-15 | Phase 0 | Initial ROADMAP, ADRs, and source manifest created; weights pending freeze at P0-05 | 0% | 0% (weights TBD) |
 | 2026-07-15 | Phase 0 | **M0 closed.** Seven ADRs accepted (`docs/adr/0001..0007.md`), source manifest moved to `docs/sources/manifest.md` with 11/11 compliance decisions, per-source compliance notes captured in `docs/sources/compliance-notes.md`. 2 sources deferred via `blocked-by-policy` (TikTok, Northrop); 7 sources `blocked-pending-owner`. Phase 0 weight frozen at 10. Phase 1 unblocked. | 0% (weights TBD) | **1.4%** (10 of 692 effort points; Phase 0 = 100%) |
+| 2026-07-17 | Phase 1 | **M1 closed.** All 5 Phase 1 tasks complete: Poetry/pyproject.toml/pip-install (P1-01), package skeleton with 43 modules (P1-02), Pydantic settings + structlog logging + `.env.example` (P1-03), pytest config + smoke tests + 80% coverage gate (P1-04), ruff/pyright/detect-secrets/CI baseline (P1-05). Evidence: 122 tests pass, coverage 92.11%, pyright 0 errors, ruff 0 errors. All files formatted. `.github/workflows/ci.yml`, `pyrightconfig.json`, `.ruff.toml`, `.secrets.baseline` committed. | 1.4% | **5.6%** (20 of 357 effort points; Phase 1 = 100%, Phase 0 = 100%) |

@@ -9,8 +9,6 @@ Marker: ``pytest -m e2e`` (process-level smoke).
 
 from __future__ import annotations
 
-from pathlib import Path
-
 import pytest
 
 
@@ -94,4 +92,6 @@ class TestPackageStructure:
 
     def test_opswat_adapter_stub_exists(self) -> None:
         """The OPSWAT adapter stub must exist for Phase 4."""
-        from job_board_scraper.adapters.implementations import opswat_adapter  # noqa: F401
+        from job_board_scraper.adapters.implementations import (
+            opswat_adapter,  # noqa: F401
+        )

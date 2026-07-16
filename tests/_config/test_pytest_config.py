@@ -19,13 +19,6 @@ from pathlib import Path
 
 import pytest
 
-
-import sys
-from pathlib import Path
-
-import pytest
-
-
 # __file__ from tests/_config/test_pytest_config.py resolves to:
 #   D:\Sources\job-board-scraper\tests\_config\test_pytest_config.py
 # parents[0] = tests/_config
@@ -63,7 +56,12 @@ class TestPytestConfiguration:
     def test_unit_marker_registered(self) -> None:
         """``unit`` marker must be registered."""
         meta = _load_pyproject()
-        markers = meta.get("tool", {}).get("pytest", {}).get("ini_options", {}).get("markers", [])
+        markers = (
+            meta.get("tool", {})
+            .get("pytest", {})
+            .get("ini_options", {})
+            .get("markers", [])
+        )
         assert any("unit" in m for m in markers), (
             f"pytest markers must include 'unit'. Found: {markers}"
         )
@@ -71,7 +69,12 @@ class TestPytestConfiguration:
     def test_integration_marker_registered(self) -> None:
         """``integration`` marker must be registered."""
         meta = _load_pyproject()
-        markers = meta.get("tool", {}).get("pytest", {}).get("ini_options", {}).get("markers", [])
+        markers = (
+            meta.get("tool", {})
+            .get("pytest", {})
+            .get("ini_options", {})
+            .get("markers", [])
+        )
         assert any("integration" in m for m in markers), (
             f"pytest markers must include 'integration'. Found: {markers}"
         )
@@ -79,7 +82,12 @@ class TestPytestConfiguration:
     def test_e2e_marker_registered(self) -> None:
         """``e2e`` marker must be registered."""
         meta = _load_pyproject()
-        markers = meta.get("tool", {}).get("pytest", {}).get("ini_options", {}).get("markers", [])
+        markers = (
+            meta.get("tool", {})
+            .get("pytest", {})
+            .get("ini_options", {})
+            .get("markers", [])
+        )
         assert any("e2e" in m for m in markers), (
             f"pytest markers must include 'e2e'. Found: {markers}"
         )
@@ -87,7 +95,12 @@ class TestPytestConfiguration:
     def test_slow_marker_registered(self) -> None:
         """``slow`` marker must be registered."""
         meta = _load_pyproject()
-        markers = meta.get("tool", {}).get("pytest", {}).get("ini_options", {}).get("markers", [])
+        markers = (
+            meta.get("tool", {})
+            .get("pytest", {})
+            .get("ini_options", {})
+            .get("markers", [])
+        )
         assert any("slow" in m for m in markers), (
             f"pytest markers must include 'slow'. Found: {markers}"
         )
@@ -95,7 +108,12 @@ class TestPytestConfiguration:
     def test_testpaths_is_configured(self) -> None:
         """``testpaths`` must point to the ``tests/`` directory."""
         meta = _load_pyproject()
-        testpaths = meta.get("tool", {}).get("pytest", {}).get("ini_options", {}).get("testpaths", [])
+        testpaths = (
+            meta.get("tool", {})
+            .get("pytest", {})
+            .get("ini_options", {})
+            .get("testpaths", [])
+        )
         assert "tests" in testpaths, (
             f"pytest testpaths must include 'tests'. Found: {testpaths}"
         )
@@ -176,6 +194,7 @@ class TestSmokeTest:
         if not smoke_dir.exists():
             pytest.skip("tests/smoke/ does not exist yet")
         import ast
+
         for test_file in smoke_dir.glob("test_*.py"):
             source = test_file.read_text(encoding="utf-8")
             try:

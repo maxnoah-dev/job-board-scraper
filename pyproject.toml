@@ -49,6 +49,7 @@ dev = [
     "pyright>=1.1,<2",
     "mypy>=1.10,<2",
     "detect-secrets>=1.5,<2",
+    "pyyaml>=6,<7",
 ]
 
 [tool.poetry]
@@ -56,8 +57,6 @@ name = "job-board-scraper"
 version = "0.1.0"
 description = "Async ETL pipeline that scrapes job listings from 11+ company career pages."
 readme = "README.md"
-# Poetry still requires the legacy package-mode field even when using
-# PEP 621 metadata via the project table above.
 package-mode = true
 authors = ["Engineering Lead <engineering@example.com>"]
 license = "Proprietary"
@@ -77,12 +76,11 @@ ruff = "^0.5"
 pyright = "^1.1"
 mypy = "^1.10"
 detect-secrets = "^1.5"
+pyyaml = "^6.0"
 
 [tool.poetry.scripts]
 # Phase 4 will wire `run-scrape` and Phase 8 will add `init-db` /
-# `seed-companies`. The script entries are declared now so the
-# packaging layer is final; the console_script entrypoints are
-# added in their owning phases.
+# `seed-companies`. Console-script entrypoints are added in their owning phases.
 job-board-scraper = "job_board_scraper.cli:main"
 
 [tool.pytest.ini_options]
@@ -119,7 +117,6 @@ skip_covered = false
 precision = 2
 # 80% global floor per the ROADMAP Phase 1 gate (P1-04).
 fail_under = 80
-# Newer coverage versions require this exact key.
 fail_under_check = "global"
 exclude_lines = [
     "pragma: no cover",
@@ -129,60 +126,8 @@ exclude_lines = [
     "\\.\\.\\.",
 ]
 
-[tool.ruff]
-line-length = 100
-target-version = "py311"
-extend-exclude = [
-    ".venv",
-    "data",
-    "logs",
-    "build",
-    "dist",
-]
-
-[tool.ruff.lint]
-# E/W = pycodestyle/pycodestyle warnings
-# F = pyflakes
-# I = isort (replaced with the unified Ruff import sort)
-# B = bugbear
-# UP = pyupgrade
-# S = bandit security
-# SIM = flake8-simplify
-select = ["E", "W", "F", "I", "B", "UP", "S", "SIM"]
-ignore = [
-    "S101",  # asserts allowed in tests
-    "UP038", # keeps isinstance tuple syntax modern
-]
-
-[tool.ruff.lint.per-file-ignores]
-"tests/**/*.py" = ["S101", "S105", "S106", "B011"]
-"scripts/**/*.py" = ["S"]
-
-[tool.ruff.format]
-quote-style = "double"
-indent-style = "space"
-line-ending = "lf"
-
-[tool.pyright]
-include = ["src", "tests"]
-exclude = [
-    ".venv",
-    "data",
-    "logs",
-    "build",
-    "dist",
-]
-pythonVersion = "3.11"
-pythonPlatform = "All"
-typeCheckingMode = "standard"
-useLibraryCodeForTypes = true
-reportMissingImports = "error"
-reportMissingTypeStubs = "error"
-reportUnknownMemberType = "warning"
-reportUnknownVariableType = "warning"
-reportUnknownParameterType = "warning"
-reportUnknownArgumentType = "warning"
-reportAttributeAccessIssue = "warning"
+[tool.coverage.paths]
+source = ["src", "*/site-packages/job_board_scraper"]
 
 [tool.mypy]
 python_version = "3.11"
@@ -204,6 +149,3 @@ exclude_lines = [
     "(?i)<api[_-]?key[^>]*>[^<]+</api[_-]?key>",
     "(?i)<password[^>]*>[^<]+</password>",
 ]
-
-[tool.coverage.paths]
-source = ["src", "*/site-packages/job_board_scraper"]

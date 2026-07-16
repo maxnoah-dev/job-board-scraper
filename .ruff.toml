@@ -1,22 +1,61 @@
 # Ruff configuration for job-board-scraper.
+# See https://docs.astral.sh/ruff/settings/ for full documentation.
+
 target-version = "py311"
 
+# Exclude paths that are out of the project's scope:
+#   .venv/        — Python virtualenv
+#   .claude/      — Cursor/Claude config (not project code)
+#   .cursor/      — Cursor IDE config
+#   .vendor/      — pip --target install cache
+#   agent-transcripts/ — conversation logs
+#   data/         — generated SQLite + CSV exports
+#   docs/         — documentation (Markdown; no lint needed)
+extend-exclude = [
+    ".venv",
+    ".claude",
+    ".cursor",
+    ".vendor",
+    "agent-transcripts",
+    "data",
+    "docs",
+    "logs",
+    "build",
+    "dist",
+]
+
 [lint]
+# Rule sets:
+#   E/W   — pycodestyle (PEP 8 errors + warnings)
+#   F     — pyflakes (unused imports, undefined names)
+#   B     — flake8-bugbear (likely bugs)
+#   UP    — pyupgrade (modern Python idioms)
+#   S     — flake8-bandit (security issues)
+#   I     — isort (import order)
+#   C4    — flake8-comprehensions (better comprehensions)
+#   N     — pep8-naming (PEP 8 naming conventions)
+#   SIM   — flake8-simplify (simplification opportunities)
+#   TID   — flake8-tidy-imports (clean imports)
 select = ["E", "W", "F", "B", "UP", "S", "I", "C4", "N", "SIM", "TID"]
 ignore = [
-    "E501",
-    "B008",
+    "E501",  # line length (enforced by formatter)
+    "B008",  # function call in default argument (acceptable for settings singletons)
 ]
 
 [lint.per-file-ignores]
-"tests/**/*.py" = ["S101", "N801"]
-"src/job_board_scraper/__init__.py" = ["F401"]
+"tests/**/*.py" = [
+    "S101",  # asserts are the whole point of tests
+    "N801",  # PascalCase class names not required for pytest Test classes
+    "S603",  # subprocess calls in tests are intentional (forking pytest/CLI tools)
+    "E741",  # single-letter `l` is fine inside test fixtures
+]
+"src/job_board_scraper/__init__.py" = ["F401"]  # re-exports allowed
+
+[lint.isort]
+known-first-party = ["job_board_scraper"]
 
 [format]
 quote-style = "double"
 indent-style = "space"
 line-ending = "lf"
 docstring-code-format = true
-
-[isort]
-known-first-party = ["job_board_scraper"]

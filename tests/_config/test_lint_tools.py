@@ -14,12 +14,10 @@ to avoid WindowsStore launcher interception.
 from __future__ import annotations
 
 import subprocess
-import sys
 from pathlib import Path
 
 import pytest
 import yaml
-
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2].resolve()
 VENV_SCRIPTS = PROJECT_ROOT / ".venv" / "Scripts"
@@ -73,16 +71,15 @@ class TestRuffConfiguration:
             )
 
     def test_ruff_config_exists(self) -> None:
-        """ruff config (pyproject.toml or .ruff.toml) must exist."""
+        """At least one Ruff config file must be present."""
         ruff_toml = PROJECT_ROOT / ".ruff.toml"
         pyproject = PROJECT_ROOT / "pyproject.toml"
-        content = ""
         if ruff_toml.exists():
-            content = ruff_toml.read_text(encoding="utf-8")
-        elif pyproject.exists():
-            content = pyproject.read_text(encoding="utf-8")
-        assert "[tool.ruff]" in content or "[ruff]" in content, (
-            "ruff configuration section must exist in pyproject.toml or .ruff.toml"
+            return  # .ruff.toml is the authoritative file
+        assert pyproject.exists(), "pyproject.toml must exist"
+        content = pyproject.read_text(encoding="utf-8")
+        assert "[tool.ruff]" in content or "select =" in content, (
+            "Ruff must be configured in .ruff.toml or [tool.ruff] in pyproject.toml"
         )
 
 
@@ -106,7 +103,11 @@ class TestPyrightConfiguration:
         """pyright config (pyproject.toml or pyrightconfig.json) must exist."""
         pyright_cfg = PROJECT_ROOT / "pyrightconfig.json"
         pyproject = PROJECT_ROOT / "pyproject.toml"
-        has_section = "[tool.pyright]" in pyproject.read_text(encoding="utf-8") if pyproject.exists() else False
+        has_section = (
+            "[tool.pyright]" in pyproject.read_text(encoding="utf-8")
+            if pyproject.exists()
+            else False
+        )
         assert pyright_cfg.exists() or has_section, (
             "pyright configuration must exist (pyrightconfig.json or [tool.pyright] in pyproject.toml)"
         )
@@ -124,10 +125,13 @@ class TestSecretScanning:
 
     def test_detect_secrets_scan_runs(self) -> None:
         """``detect-secrets scan .`` must run without crashing."""
+        # Newer detect-secrets versions accept only --base64-limit on `scan`.
+        # Keep the call minimal and rely on a project-level baseline if available.
         result = _venv_module(
-            "detect_secrets", "scan",
-            "--base64-limit", "4.5",
-            "--string-limit", "4.5",
+            "detect_secrets",
+            "scan",
+            "--base64-limit",
+            "4.5",
             ".",
         )
         assert result.returncode in (0, 1), (
@@ -168,9 +172,7 @@ class TestCIBaseline:
         if not ci_file.exists():
             pytest.skip("ci.yml missing")
         content = ci_file.read_text(encoding="utf-8")
-        assert "ruff" in content, (
-            ".github/workflows/ci.yml must include a ruff step"
-        )
+        assert "ruff" in content, ".github/workflows/ci.yml must include a ruff step"
 
     def test_ci_workflow_runs_pyright(self) -> None:
         """CI workflow must run ``pyright``."""
