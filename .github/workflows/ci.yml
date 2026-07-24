@@ -7,20 +7,16 @@ on:
     branches: [main]
 
 jobs:
-  test:
+  quality:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python-version: ["3.11", "3.12"]
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up Python ${{ matrix.python-version }}
+      - name: Set up Python 3.12
         uses: actions/setup-python@v5
         with:
-          python-version: ${{ matrix.python-version }}
+          python-version: "3.12"
           cache: pip
 
       - name: Install dependencies
@@ -40,11 +36,67 @@ jobs:
       - name: detect-secrets scan
         run: detect-secrets scan --baseline .secrets.baseline .
 
-      - name: Run tests with coverage
-        run: pytest --cov=job_board_scraper --cov-fail-under=80 -v
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12"]
+        db: ["sqlite", "postgres"]
+        include:
+          - python-version: "3.12"
+            db: "postgres"
+            postgres-version: "16"
+
+    services:
+      postgres:
+        if: matrix.db == 'postgres'
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: jobs
+          POSTGRES_PASSWORD: jobs  # pragma: allowlist secret
+          POSTGRES_DB: jobs
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+
+      - name: Run unit tests
+        if: matrix.db == 'sqlite'
+        run: pytest tests/unit -v --cov=job_board_scraper --cov-fail-under=80 -q
+
+      - name: Run integration tests (SQLite)
+        if: matrix.db == 'sqlite'
+        env:
+          DATABASE_URL: "sqlite+aiosqlite:///./data/test_jobs.db"
+        run: pytest tests/integration -v -q
+
+      - name: Run integration tests (PostgreSQL)
+        if: matrix.db == 'postgres'
+        env:
+          DATABASE_URL: "postgresql+asyncpg://jobs:jobs@localhost:5432/jobs"
+        run: pytest tests/integration -v -q
 
       - name: Upload coverage to Codecov
-        if: matrix.python-version == '3.12'
+        if: matrix.python-version == '3.12' && matrix.db == 'sqlite'
         uses: codecov/codecov-action@v4
         with:
           file: ./coverage.xml

@@ -27,11 +27,13 @@ class TestCliEntryPoint:
         assert callable(main)
 
     def test_cli_main_raises_not_implemented(self) -> None:
-        """``cli.main`` must raise ``NotImplementedError`` before Phase 4."""
+        """``cli.main`` must raise ``SystemExit`` when called without arguments."""
         from job_board_scraper.cli import main
 
-        with pytest.raises(NotImplementedError):
+        with pytest.raises(SystemExit) as exc_info:
             main()
+        # argparse exits with code 2 when required subcommand is missing
+        assert exc_info.value.code == 2
 
 
 @pytest.mark.e2e

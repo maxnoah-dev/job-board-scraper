@@ -83,6 +83,9 @@ ignore = [
     "UP007",  # Union[X, Y] is required by Alembic
     "UP035",  # typing.Sequence is required by Alembic
 ]
+"scripts/**/*.py" = [
+    "E402",  # sys.path modification to include src/ is intentional
+]
 
 [lint.isort]
 known-first-party = ["job_board_scraper"]

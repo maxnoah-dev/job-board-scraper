@@ -1,0 +1,45 @@
+# Build artifacts
+**/__pycache__
+**/*.pyc
+**/*.pyo
+**/*.pyd
+**/*.so
+**/*.egg-info
+**/.pytest_cache
+**/.ruff_cache
+**/.mypy_cache
+**/.pyright
+**/coverage.xml
+**/.coverage
+**/.coverage.*
+**/htmlcov
+**/.venv
+**/venv
+**/build
+**/dist
+
+# Local data
+data/*.db
+data/*.sqlite
+data/*.sqlite3
+data/exports/*.csv
+data/exports/*.xlsx
+
+# Logs
+logs/*.log
+logs/*.log.*
+
+# Secrets & local config
+.env
+.env.local
+.env.*.local
+
+# IDE
+.idea
+.vscode
+.cursor/commands
+.claude/commands
+
+# OS
+.DS_Store
+Thumbs.db

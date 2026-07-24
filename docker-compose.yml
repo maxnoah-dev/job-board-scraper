@@ -1,0 +1,55 @@
+﻿# docker-compose.yml â€” local development & CI smoke stack.
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: jbs-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: 
+      POSTGRES_PASSWORD: 
+      POSTGRES_DB: 
+    ports:
+      - ":5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-jobs} -d ${POSTGRES_DB:-jobs}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks:
+      - jbs-net
+
+  scraper:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: ${SCRAPER_TARGET:-runtime}
+    image: job-board-scraper:${SCRAPER_TAG:-local}
+    container_name: jbs-scraper
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-jobs}:${POSTGRES_PASSWORD:-jobs}@postgres:5432/${POSTGRES_DB:-jobs}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      LOG_FILE: /app/logs/scraper.log
+      EXPORT_DIR: /app/data
+      SCHEDULER_ENABLED: "false"
+      PLAYWRIGHT_BROWSERS_INSTALLED: ${PLAYWRIGHT_BROWSERS_INSTALLED:-false}
+      ALERT_EMAIL_ENABLED: ${ALERT_EMAIL_ENABLED:-false}
+      ALERT_SLACK_WEBHOOK: ${ALERT_SLACK_WEBHOOK:-}
+    volumes:
+      - scraper-data:/app/data
+      - scraper-logs:/app/logs
+    networks:
+      - jbs-net
+
+volumes:
+  postgres-data:
+  scraper-data:
+  scraper-logs:
+
+networks:
+  jbs-net:
+    driver: bridge

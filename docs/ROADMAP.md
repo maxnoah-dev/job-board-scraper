@@ -55,9 +55,9 @@ This document is the **single source of truth** for project status, planned vs. 
 | P6 | Static HTML adapters | M6 HTML Complete | 35 | 35 | done | 100% |
 | P7 | Browser adapters and Playwright hardening | M7 All Sources Covered | 40 | 40 | done | 100% |
 | P8 | Operations, monitoring, alerts, reporting | M8 Operationally Observable | 30 | 30 | done | 100% |
-| P9 | Docker/PostgreSQL release hardening | M9 Release Candidate | 35 | 0 | not-started | 0% |
+| P9 | Docker/PostgreSQL release hardening | M9 Release Candidate | 35 | 35 | done | 100% |
 
-Overall progress: **~91%** (Phase 0-8 complete; Phase 9 pending).
+Overall progress: **~100%** (Phase 0-9 complete — M9 Release Candidate ready).
 
 ## Phase 0 — Scope, source inventory, progress baseline
 
