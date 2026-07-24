@@ -1,9 +1,8 @@
-"""Company domain model.
+"""Company model.
 
-Pydantic v2 schema for a company with its adapter type, base URL, and
-per-source configuration.
-
-Real implementation lands in Phase 2 (P2-01..P2-02).
+Re-exports from the SQLAlchemy company model for backwards compatibility.
 """
 
-from __future__ import annotations
+from job_board_scraper.models.db_company import AdapterType, Company
+
+__all__ = ["AdapterType", "Company"]

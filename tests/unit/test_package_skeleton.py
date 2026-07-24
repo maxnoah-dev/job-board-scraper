@@ -27,6 +27,7 @@ EXPECTED_PACKAGES: list[str] = [
     "job_board_scraper.cli",
     # core/
     "job_board_scraper.core",
+    "job_board_scraper.core.base",
     "job_board_scraper.core.config",
     "job_board_scraper.core.database",
     "job_board_scraper.core.logging",
@@ -34,6 +35,10 @@ EXPECTED_PACKAGES: list[str] = [
     "job_board_scraper.models",
     "job_board_scraper.models.job",
     "job_board_scraper.models.company",
+    "job_board_scraper.models.db_company",
+    "job_board_scraper.models.db_job",
+    "job_board_scraper.models.db_scrape_attempt",
+    "job_board_scraper.models.db_scrape_run",
     "job_board_scraper.models.scrape_log",
     # repositories/
     "job_board_scraper.repositories",
@@ -47,9 +52,13 @@ EXPECTED_PACKAGES: list[str] = [
     "job_board_scraper.etl.transformer",
     "job_board_scraper.etl.loader",
     "job_board_scraper.etl.deduplicator",
+    "job_board_scraper.etl.pipeline",
+    "job_board_scraper.etl.stale_reconciler",
+    "job_board_scraper.etl.multi_adapter",
     # adapters/
     "job_board_scraper.adapters",
     "job_board_scraper.adapters.base",
+    "job_board_scraper.adapters.config",
     "job_board_scraper.adapters.registry",
     "job_board_scraper.adapters.protocols",
     "job_board_scraper.adapters.protocols.api_adapter",
@@ -57,11 +66,17 @@ EXPECTED_PACKAGES: list[str] = [
     "job_board_scraper.adapters.protocols.browser_adapter",
     "job_board_scraper.adapters.implementations",
     "job_board_scraper.adapters.implementations.opswat_adapter",
+    "job_board_scraper.adapters.implementations.vancity_adapter",
+    "job_board_scraper.adapters.implementations.techcorp_adapter",
+    "job_board_scraper.adapters.implementations.tiktok_adapter",
+    "job_board_scraper.adapters.implementations.northrop_adapter",
+    "job_board_scraper.adapters.implementations.startup_xyz_adapter",
     # monitoring/
     "job_board_scraper.monitoring",
     "job_board_scraper.monitoring.alert_manager",
     "job_board_scraper.monitoring.metrics",
     "job_board_scraper.monitoring.detectors",
+    "job_board_scraper.monitoring.selector_drift",
     # scheduler/
     "job_board_scraper.scheduler",
     "job_board_scraper.scheduler.scheduler",
@@ -71,11 +86,30 @@ EXPECTED_PACKAGES: list[str] = [
     "job_board_scraper.utils.rate_limiter",
     "job_board_scraper.utils.retry",
     "job_board_scraper.utils.user_agents",
+    "job_board_scraper.utils.circuit_breaker",
+    "job_board_scraper.utils.http",
+    "job_board_scraper.utils.html_parser",
+    "job_board_scraper.utils.browser",
+    # reporting/
+    "job_board_scraper.reporting",
+    "job_board_scraper.reporting.csv_exporter",
+    # web/
+    "job_board_scraper.web",
+    "job_board_scraper.web.app",
+    "job_board_scraper.web.routes",
+    "job_board_scraper.web.routes.api",
+    "job_board_scraper.web.routes.companies",
+    "job_board_scraper.web.routes.dashboard",
+    "job_board_scraper.web.routes.jobs",
+    "job_board_scraper.web.routes.runs",
 ]
 
 # Directed edges that represent allowed imports between modules.
 # Any import chain that creates a cycle back to the importer is a failure.
+# Note: intra-package imports (same package) are not checked since
+# importing B in package A will always load A.__init__ first.
 _ALLOWED_IMPORTS: set[tuple[str, str]] = {
+    # ETL
     ("job_board_scraper.etl.extractor", "job_board_scraper.models.job"),
     ("job_board_scraper.etl.extractor", "job_board_scraper.adapters.registry"),
     ("job_board_scraper.etl.transformer", "job_board_scraper.models.job"),
@@ -83,22 +117,58 @@ _ALLOWED_IMPORTS: set[tuple[str, str]] = {
     ("job_board_scraper.etl.base", "job_board_scraper.etl.transformer"),
     ("job_board_scraper.etl.base", "job_board_scraper.etl.loader"),
     ("job_board_scraper.etl.base", "job_board_scraper.etl.deduplicator"),
-    ("job_board_scraper.adapters.base", "job_board_scraper.adapters.protocols"),
-    ("job_board_scraper.adapters.registry", "job_board_scraper.adapters.base"),
-    ("job_board_scraper.monitoring.alert_manager", "job_board_scraper.core.logging"),
-    ("job_board_scraper.core.database", "job_board_scraper.models.company"),
-    ("job_board_scraper.core.database", "job_board_scraper.models.job"),
+    ("job_board_scraper.etl.pipeline", "job_board_scraper.adapters.base"),
+    ("job_board_scraper.etl.stale_reconciler", "job_board_scraper.models.job"),
+    # Repositories
     ("job_board_scraper.repositories.job_repository", "job_board_scraper.models.job"),
     (
+        "job_board_scraper.repositories.job_repository",
+        "job_board_scraper.models.db_job",
+    ),
+    (
         "job_board_scraper.repositories.company_repository",
-        "job_board_scraper.models.company",
+        "job_board_scraper.models.db_company",
     ),
     (
         "job_board_scraper.repositories.scrape_log_repository",
-        "job_board_scraper.models.scrape_log",
+        "job_board_scraper.models.db_scrape_run",
     ),
+    (
+        "job_board_scraper.repositories.scrape_log_repository",
+        "job_board_scraper.models.db_scrape_attempt",
+    ),
+    (
+        "job_board_scraper.repositories.scrape_log_repository",
+        "job_board_scraper.models.db_company",
+    ),
+    # Scheduler
     ("job_board_scraper.scheduler.scheduler", "job_board_scraper.core.logging"),
+    # Monitoring
+    ("job_board_scraper.monitoring.alert_manager", "job_board_scraper.core.logging"),
+    # CLI
     ("job_board_scraper.cli", "job_board_scraper.etl"),
+    # Web
+    ("job_board_scraper.web.app", "job_board_scraper.core.database"),
+    (
+        "job_board_scraper.web.routes.dashboard",
+        "job_board_scraper.repositories.company_repository",
+    ),
+    (
+        "job_board_scraper.web.routes.dashboard",
+        "job_board_scraper.repositories.scrape_log_repository",
+    ),
+    (
+        "job_board_scraper.web.routes.runs",
+        "job_board_scraper.repositories.scrape_log_repository",
+    ),
+    (
+        "job_board_scraper.web.routes.companies",
+        "job_board_scraper.repositories.company_repository",
+    ),
+    (
+        "job_board_scraper.web.routes.jobs",
+        "job_board_scraper.repositories.job_repository",
+    ),
 }
 
 

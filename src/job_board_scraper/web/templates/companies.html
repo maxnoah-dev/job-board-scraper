@@ -1,0 +1,131 @@
+{% extends "base.html" %}
+
+{% block title %}Companies - Job Board Scraper{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <h1 class="h3 mb-0 text-gray-800">Companies</h1>
+        <p class="text-muted">All job sources being tracked</p>
+    </div>
+</div>
+
+<div class="card border-0 shadow-sm">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th class="border-0">Company</th>
+                        <th class="border-0">Adapter Type</th>
+                        <th class="border-0">Status</th>
+                        <th class="border-0">Jobs</th>
+                        <th class="border-0">Open Jobs</th>
+                        <th class="border-0">Last Run</th>
+                        <th class="border-0">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if companies %}
+                        {% for company in companies %}
+                        <tr>
+                            <td class="align-middle">
+                                <a href="{{ url_for('company_detail', slug=company.slug) }}" class="fw-medium">
+                                    {{ company.name }}
+                                </a>
+                                <br>
+                                <small class="text-muted">{{ company.base_url }}</small>
+                            </td>
+                            <td class="align-middle">
+                                {% set adapter_class = {
+                                    'api': 'bg-primary',
+                                    'html': 'bg-info',
+                                    'browser': 'bg-warning text-dark'
+                                } %}
+                                <span class="badge {{ adapter_class.get(company.adapter_type, 'bg-secondary') }}">
+                                    {{ company.adapter_type|upper }}
+                                </span>
+                            </td>
+                            <td class="align-middle">
+                                {% if company.is_active %}
+                                    <span class="badge bg-success">Active</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">Inactive</span>
+                                {% endif %}
+                            </td>
+                            <td class="align-middle">{{ company.total_jobs }}</td>
+                            <td class="align-middle">
+                                {% if company.open_jobs > 0 %}
+                                    <span class="text-success">{{ company.open_jobs }}</span>
+                                {% else %}
+                                    {{ company.open_jobs }}
+                                {% endif %}
+                            </td>
+                            <td class="align-middle">
+                                {% if company.last_run_at %}
+                                    {{ company.last_run_at.strftime('%Y-%m-%d %H:%M') }}
+                                {% else %}
+                                    <span class="text-muted">Never</span>
+                                {% endif %}
+                            </td>
+                            <td class="align-middle">
+                                <a href="{{ url_for('company_detail', slug=company.slug) }}" class="btn btn-outline-primary btn-sm">
+                                    View
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr>
+                            <td colspan="7" class="text-center text-muted py-4">No companies found.</td>
+                        </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Pagination -->
+{% if total_pages > 1 %}
+<nav class="mt-4" aria-label="Pagination">
+    <ul class="pagination justify-content-center">
+        {% if page > 1 %}
+        <li class="page-item">
+            <a class="page-link" href="{{ url_for('list_companies', page=page-1) }}">Previous</a>
+        </li>
+        {% else %}
+        <li class="page-item disabled">
+            <span class="page-link">Previous</span>
+        </li>
+        {% endif %}
+
+        {% for p in range(1, total_pages + 1) %}
+            {% if p == page %}
+            <li class="page-item active">
+                <span class="page-link">{{ p }}</span>
+            </li>
+            {% elif p <= 3 or p > total_pages - 3 or (p >= page - 1 and p <= page + 1) %}
+            <li class="page-item">
+                <a class="page-link" href="{{ url_for('list_companies', page=p) }}">{{ p }}</a>
+            </li>
+            {% elif p == 4 or p == total_pages - 3 %}
+            <li class="page-item disabled">
+                <span class="page-link">...</span>
+            </li>
+            {% endif %}
+        {% endfor %}
+
+        {% if page < total_pages %}
+        <li class="page-item">
+            <a class="page-link" href="{{ url_for('list_companies', page=page+1) }}">Next</a>
+        </li>
+        {% else %}
+        <li class="page-item disabled">
+            <span class="page-link">Next</span>
+        </li>
+        {% endif %}
+    </ul>
+</nav>
+{% endif %}
+{% endblock %}

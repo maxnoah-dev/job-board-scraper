@@ -1,0 +1,142 @@
+{% extends "base.html" %}
+
+{% block title %}Scrape Runs - Job Board Scraper{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <h1 class="h3 mb-0 text-gray-800">Scrape Runs</h1>
+        <p class="text-muted">History of all scraping operations</p>
+    </div>
+</div>
+
+<div class="card border-0 shadow-sm">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th class="border-0">ID</th>
+                        <th class="border-0">Started</th>
+                        <th class="border-0">Finished</th>
+                        <th class="border-0">Duration</th>
+                        <th class="border-0">Jobs Found</th>
+                        <th class="border-0">New Jobs</th>
+                        <th class="border-0">Closed</th>
+                        <th class="border-0">Success Rate</th>
+                        <th class="border-0">Status</th>
+                        <th class="border-0">Triggered By</th>
+                        <th class="border-0">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if runs %}
+                        {% for run in runs %}
+                        <tr>
+                            <td class="align-middle">#{{ run.id }}</td>
+                            <td class="align-middle">{{ run.started_at.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                            <td class="align-middle">
+                                {% if run.finished_at %}
+                                    {{ run.finished_at.strftime('%Y-%m-%d %H:%M:%S') }}
+                                {% else %}
+                                    -
+                                {% endif %}
+                            </td>
+                            <td class="align-middle">
+                                {% if run.duration_seconds %}
+                                    {{ "%.1f"|format(run.duration_seconds) }}s
+                                {% else %}
+                                    -
+                                {% endif %}
+                            </td>
+                            <td class="align-middle">{{ run.total_jobs_found }}</td>
+                            <td class="align-middle">{{ run.total_new_jobs }}</td>
+                            <td class="align-middle">{{ run.total_closed_jobs }}</td>
+                            <td class="align-middle">
+                                {% if run.total_jobs_found > 0 %}
+                                    {{ ((run.total_jobs_found - run.total_failed) / run.total_jobs_found * 100)|round|int }}%
+                                {% else %}
+                                    -
+                                {% endif %}
+                            </td>
+                            <td class="align-middle">
+                                {% set status_class = {
+                                    'success': 'bg-success',
+                                    'partial': 'bg-warning text-dark',
+                                    'failed': 'bg-danger',
+                                    'running': 'bg-info',
+                                    'cancelled': 'bg-secondary',
+                                    'interrupted': 'bg-dark'
+                                } %}
+                                <span class="badge {{ status_class.get(run.status, 'bg-secondary') }}">
+                                    {{ run.status|title }}
+                                </span>
+                            </td>
+                            <td class="align-middle">
+                                {% if run.triggered_by %}
+                                    {{ run.triggered_by }}
+                                {% else %}
+                                    -
+                                {% endif %}
+                            </td>
+                            <td class="align-middle">
+                                <a href="{{ url_for('run_detail', run_id=run.id) }}" class="btn btn-outline-primary btn-sm">
+                                    Details
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr>
+                            <td colspan="11" class="text-center text-muted py-4">No scrape runs yet.</td>
+                        </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Pagination -->
+{% if total_pages > 1 %}
+<nav class="mt-4" aria-label="Pagination">
+    <ul class="pagination justify-content-center">
+        {% if page > 1 %}
+        <li class="page-item">
+            <a class="page-link" href="{{ url_for('list_runs', page=page-1) }}">Previous</a>
+        </li>
+        {% else %}
+        <li class="page-item disabled">
+            <span class="page-link">Previous</span>
+        </li>
+        {% endif %}
+
+        {% for p in range(1, total_pages + 1) %}
+            {% if p == page %}
+            <li class="page-item active">
+                <span class="page-link">{{ p }}</span>
+            </li>
+            {% elif p <= 3 or p > total_pages - 3 or (p >= page - 1 and p <= page + 1) %}
+            <li class="page-item">
+                <a class="page-link" href="{{ url_for('list_runs', page=p) }}">{{ p }}</a>
+            </li>
+            {% elif p == 4 or p == total_pages - 3 %}
+            <li class="page-item disabled">
+                <span class="page-link">...</span>
+            </li>
+            {% endif %}
+        {% endfor %}
+
+        {% if page < total_pages %}
+        <li class="page-item">
+            <a class="page-link" href="{{ url_for('list_runs', page=page+1) }}">Next</a>
+        </li>
+        {% else %}
+        <li class="page-item disabled">
+            <span class="page-link">Next</span>
+        </li>
+        {% endif %}
+    </ul>
+</nav>
+{% endif %}
+{% endblock %}
