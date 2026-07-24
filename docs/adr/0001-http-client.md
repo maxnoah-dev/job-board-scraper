@@ -1,86 +1,59 @@
 # ADR 0001 — HTTP client
 
-- Status: Accepted
-- Date: 2026-07-15
-- Phase: 0 (Scope & Decisions)
-- Authors: Tech Lead
-- Supersedes: none
+- Trạng thái: Đã chấp nhận
+- Ngày: 2026-07-15
+- Giai đoạn: 0 (Phạm vi & Quyết định)
+- Tác giả: Tech Lead
+- Thay thế: không
 
-## Context
+## Bối cảnh
 
-`TECHNICAL.md` §1.1 originally proposed `asyncio + aiohttp` as the async runtime
-and `aiohttp` as the default HTTP client. By the time the project moved to
-implementation we already needed:
+`TECHNICAL.md` §1.1 ban đầu đề xuất `asyncio + aiohttp` làm runtime bất đồng bộ và `aiohttp` làm HTTP client mặc định. Đến khi dự án chuyển sang giai đoạn triển khai, chúng ta đã cần:
 
-- HTTP/2 support for ATS endpoints that only expose their listing API over
-  HTTP/2 (some Workday and SmartRecruiters tenants).
-- First-class `Timeout`, `Limits`, and `AsyncClient` lifecycle helpers with
-  predictable behaviour on `asyncio.CancelledError`.
-- A single client that we can reuse for the static HTML adapters too, so that
-  proxy headers, user-agent, and tracing are configured in one place.
-- Type stubs that pass Pyright in strict mode without monkey patching.
+- Hỗ trợ HTTP/2 cho các endpoint ATS chỉ expose API danh sách qua HTTP/2 (một số tenant Workday và SmartRecruiters).
+- Các hàm hỗ trợ `Timeout`, `Limits`, và vòng đời `AsyncClient` hạng nhất với hành vi có thể dự đoán được khi gặp `asyncio.CancelledError`.
+- Một client duy nhất có thể dùng chung cho các adapter HTML tĩnh, để proxy headers, user-agent và tracing được cấu hình tập trung một chỗ.
+- Type stubs vượt qua Pyright ở strict mode mà không cần monkey patching.
 
-`httpx` already covers all four. Mixing `aiohttp` and `httpx` adds two
-connection pools and two sets of quirks (chunked encoding, proxy auth, header
-canonicalisation) for no measurable benefit.
+`httpx` đã đáp ứng đủ cả bốn yêu cầu. Việc trộn `aiohttp` và `httpx` sẽ thêm hai connection pool và hai bộ đặc thù (chunked encoding, proxy auth, chuẩn hoá header) mà không mang lại lợi ích rõ rệt.
 
-`scrapy` and `pandas` are still listed as optional in `TECHNICAL.md` §1.2, but
-they pull in transitive dependencies (Twisted, lxml, numpy) that are not
-required by any adapter in the release-1 manifest. They are explicitly out of
-the core.
+`scrapy` và `pandas` vẫn được liệt kê là tuỳ chọn trong `TECHNICAL.md` §1.2, nhưng chúng kéo theo các phụ thuộc bắc cầu (Twisted, lxml, numpy) không cần thiết cho bất kỳ adapter nào trong manifest bản phát hành 1. Chúng được loại khỏi lõi.
 
-## Decision
+## Quyết định
 
-- Use `httpx.AsyncClient` as the single HTTP client for all adapter families
-  (API, HTML, and browser fallback HTTP probes).
-- Do **not** introduce `aiohttp` as a dependency.
-- Do **not** add `scrapy` or `pandas` to `pyproject.toml` until a concrete use
-  case appears. Re-evaluate via a new ADR if and when such a use case lands.
-- All adapter code goes through a single `HttpClient` wrapper
-  (`src/utils/http.py`) that owns the `httpx.AsyncClient` lifecycle, timeout
-  configuration, structured redacted logging, and retry classification.
-- Per-source headers, cookies, and credential injection live on the adapter
-  config object, not in the shared client.
+- Dùng `httpx.AsyncClient` làm HTTP client duy nhất cho tất cả các họ adapter (API, HTML, và các HTTP probe dự phòng cho trình duyệt).
+- **Không** đưa `aiohttp` vào danh sách phụ thuộc.
+- **Không** thêm `scrapy` hay `pandas` vào `pyproject.toml` cho đến khi có một use case cụ thể. Đánh giá lại qua ADR mới khi use case đó xuất hiện.
+- Toàn bộ mã adapter phải đi qua wrapper `HttpClient` duy nhất (`src/utils/http.py`) — nơi quản lý vòng đời `httpx.AsyncClient`, cấu hình timeout, log có cấu trúc được che dấu, và phân loại retry.
+- Header, cookie và tiêm credential theo từng nguồn nằm trên đối tượng config của adapter, không nằm trên client dùng chung.
 
-## Alternatives Considered
+## Các phương án đã xét
 
-### Alternative 1: `aiohttp` for everything
+### Phương án 1: Dùng `aiohttp` cho mọi thứ
 
-- Pros: Mature, slightly faster on plain HTTP/1.1, mature session middleware.
-- Cons: No native HTTP/2, weaker Pyright story, separate stack from any
-  Playwright HTTP probing code.
-- Why not: HTTP/2 is required by at least one ATS tenant; the maintenance cost
-  of running two HTTP stacks outweighs any single-stack performance gain.
+- Ưu điểm: Trưởng thành, hơi nhanh hơn trên HTTP/1.1 thuần, middleware session trưởng thành.
+- Nhược điểm: Không có HTTP/2 native, câu chuyện Pyright yếu hơn, tách stack khỏi mọi mã HTTP probe do trình duyệt điều khiển.
+- Lý do không chọn: HTTP/2 là yêu cầu bắt buộc đối với ít nhất một tenant ATS; chi phí bảo trì khi chạy hai HTTP stack vượt xa mọi lợi ích hiệu năng đơn lẻ.
 
-### Alternative 2: `requests` + `asyncio.to_thread`
+### Phương án 2: `requests` + `asyncio.to_thread`
 
-- Pros: Familiar API, large community.
-- Cons: Blocking I/O underneath, defeats the async event loop, cannot share a
-  connection pool with browser-driven requests.
-- Why not: It removes the main reason we picked Python 3.11+ for this
-  project.
+- Ưu điểm: API quen thuộc, cộng đồng lớn.
+- Nhược điểm: I/O chặn bên dưới, phá vỡ event loop bất đồng bộ, không chia sẻ connection pool với các request do trình duyệt điều khiển.
+- Lý do không chọn: Nó loại bỏ lý do chính mà chúng ta chọn Python 3.11+ cho dự án.
 
-### Alternative 3: `scrapy` as the framework
+### Phương án 3: `scrapy` làm framework
 
-- Pros: Crawler, deduplication, and feed export built in.
-- Cons: Twisted-based runtime, opinionated crawler model that does not map
-  cleanly onto our adapter/ETL split, large dependency surface.
-- Why not: We already have a deliberate ETL + plugin architecture. Scrapy
-  would force us to re-shape the project around its crawler model.
+- Ưu điểm: Crawler, khử trùng lặp và xuất feed có sẵn.
+- Nhược điểm: Runtime dựa trên Twisted, mô hình crawler có chủ ý không khớp với cách tách adapter/ETL của chúng ta, bề mặt phụ thuộc lớn.
+- Lý do không chọn: Chúng ta đã có kiến trúc ETL + plugin cố ý. Scrapy sẽ bắt chúng ta phải tái cấu trúc dự án theo mô hình crawler của nó.
 
-## Consequences
+## Hệ quả
 
-- Positive: One HTTP stack, predictable timeouts, shared rate-limit headers,
-  shared tracing, HTTP/2 when the server supports it.
-- Positive: Pyright in strict mode passes without `type: ignore` on HTTP code
-  paths.
-- Negative: We must write our own retry and circuit-breaker layers (already
-  scoped in Phase 3).
-- Risks: If `httpx` stops being maintained, we have to migrate the whole
-  stack. Mitigation: keep the dependency behind the `HttpClient` interface so
-  the migration surface stays small.
+- Tích cực: Một HTTP stack, timeout có thể dự đoán, header rate-limit dùng chung, tracing dùng chung, HTTP/2 khi server hỗ trợ.
+- Tích cực: Pyright ở strict mode pass mà không cần `type: ignore` trên các đường dẫn HTTP.
+- Tiêu cực: Phải tự viết các lớp retry và circuit-breaker (đã nằm trong phạm vi Giai đoạn 3).
+- Rủi ro: Nếu `httpx` ngừng được bảo trì, chúng ta phải di trú toàn bộ stack. Giảm thiểu: giữ phụ thuộc phía sau interface `HttpClient` để bề mặt di trú nhỏ.
 
-## Open questions
+## Câu hỏi mở
 
-- None at M0. We will revisit if Phase 5/6 surfaces a tenant that requires a
-  feature `httpx` cannot provide.
+- Không có tại M0. Sẽ xem lại nếu Giai đoạn 5/6 làm lộ ra tenant cần tính năng mà `httpx` không cung cấp.

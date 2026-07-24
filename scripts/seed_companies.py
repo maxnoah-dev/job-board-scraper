@@ -118,18 +118,20 @@ async def _upsert_company(session, data: dict) -> tuple[bool, str]:
     from sqlalchemy import select
 
     slug = data["slug"]
+    # Strip non-column fields (manifest annotations only).
+    db_data = {k: v for k, v in data.items() if k not in ("id", "compliance_status")}
+
     stmt = select(Company).where(Company.slug == slug)
     result = await session.execute(stmt)
     existing = result.scalar_one_or_none()
 
     if existing:
-        for key, value in data.items():
-            if key not in ("id",):
-                setattr(existing, key, value)
+        for key, value in db_data.items():
+            setattr(existing, key, value)
         await session.flush()
         return False, slug
 
-    company = Company(**data)
+    company = Company(**db_data)
     session.add(company)
     await session.flush()
     return True, slug

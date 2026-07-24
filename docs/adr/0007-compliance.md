@@ -1,80 +1,56 @@
-# ADR 0007 — Source compliance policy
+# ADR 0007 — Chính sách tuân thủ nguồn
 
-- Status: Accepted
-- Date: 2026-07-15
-- Phase: 0 (Scope & Decisions)
-- Authors: Tech Lead + Product Owner
-- Supersedes: none
+- Trạng thái: Đã chấp nhận
+- Ngày: 2026-07-15
+- Giai đoạn: 0 (Phạm vi & Quyết định)
+- Tác giả: Tech Lead + Product Owner
+- Thay thế: không
 
-## Context
+## Bối cảnh
 
-`PLAN.md` §4 names "anti-bot bypass" as a real technical risk for TikTok and
-Northrop Grumman. `TECHNICAL.md` §8 lists "switch to browser mode" as a
-recovery strategy for anti-bot challenges, which is the wrong default for a
-compliance-first project.
+`PLAN.md` §4 nêu "vượt anti-bot" là rủi ro kỹ thuật thực sự với TikTok và Northrop Grumman. `TECHNICAL.md` §8 liệt kê "chuyển sang chế độ trình duyệt" là chiến lược khôi phục khi gặp thử thách anti-bot, đây là giá trị mặc định sai cho dự án ưu tiên tuân thủ.
 
-A data scraper must respect the rules of each target. Anything else exposes
-the project to legal and reputational risk that outweighs the value of one
-extra source.
+Một trình cào dữ liệu phải tôn trọng quy tắc của từng mục tiêu. Bất kỳ điều gì khác đều khiến dự án đối mặt rủi ro pháp lý và uy tín vượt xa giá trị của một nguồn bổ sung.
 
-## Decision
+## Quyết định
 
-- Every source listed in `docs/sources/manifest.md` must have a written
-  compliance record (`docs/sources/compliance-notes.md`) covering:
-  1. `robots.txt` allowance for the careers path.
-  2. Terms of Service summary relevant to automated access.
-  3. Whether the source publishes an API or ATS and whether its terms
-     explicitly forbid scraping of the public HTML page.
-  4. Decision: `approved`, `needs-review`, `blocked`.
-- **No source may implement an anti-bot bypass.** Headless browsers are
-  permitted only to load public pages that the source already serves to
-  unauthenticated visitors; they may not impersonate specific device
-  fingerprints, rotate residential proxies, or solve CAPTCHAs.
-- A source whose compliance status is `needs-review` cannot start Phase 7
-  (browser) work until a human product owner flips it to `approved` or
-  `blocked`.
-- A source marked `blocked` may not appear in any Phase-5+ deliverable.
-  Adapters for blocked sources are removed from the registry at startup.
-- Each adapter exposes a per-source **kill switch** in
-  `config/adapters/<slug>.yaml` (`enabled: false`). Setting the switch is a
-  runtime decision; it does not require a code change.
-- The `compliance_status` column on the manifest is the single source of
-  truth. Phase 0 must close with all 11 sources marked.
+- Mọi nguồn liệt kê trong `docs/sources/manifest.md` phải có hồ sơ tuân thủ bằng văn bản (`docs/sources/compliance-notes.md`) bao gồm:
+  1. Cho phép `robots.txt` đối với đường dẫn tuyển dụng.
+  2. Tóm tắt Điều khoản Dịch vụ liên quan đến truy cập tự động.
+  3. Nguồn có công bố API hay ATS không, và điều khoản có cấm rõ ràng việc cào trang HTML công khai hay không.
+  4. Quyết định: `approved`, `needs-review`, `blocked`.
+- **Không nguồn nào được triển khai cơ chế vượt anti-bot.** Trình duyệt headless chỉ được phép tải các trang công khai mà nguồn đã phục vụ cho khách truy cập chưa xác thực; không được mạo danh dấu vân tay thiết bị cụ thể, luân phiên proxy dân cư, hay giải CAPTCHA.
+- Nguồn có trạng thái tuân thủ `needs-review` không thể bắt đầu công việc Giai đoạn 7 (trình duyệt) cho đến khi product owner đổi sang `approved` hoặc `blocked`.
+- Nguồn đánh dấu `blocked` không được xuất hiện trong bất kỳ sản phẩm Giai đoạn 5+ nào. Adapter của nguồn bị chặn bị loại khỏi registry khi khởi động.
+- Mỗi adapter phơi ra **kill switch** theo nguồn trong `config/adapters/<slug>.yaml` (`enabled: false`). Việc đặt switch là quyết định runtime; không cần đổi mã.
+- Cột `compliance_status` trên manifest là nguồn sự thật duy nhất. Giai đoạn 0 phải kết thúc với cả 11 nguồn đã được đánh dấu.
 
-## Alternatives Considered
+## Các phương án đã xét
 
-### Alternative 1: Implement anti-bot bypass for TikTok and Northrop
+### Phương án 1: Triển khai vượt anti-bot cho TikTok và Northrop
 
-- Pros: More sources in release 1.
-- Cons: Legal exposure, reputational risk, IP-ban risk, and ethical concerns
-  about violating target servers' explicit access policies.
-- Why not: Out of scope. Deferred.
+- Ưu điểm: Thêm nhiều nguồn trong bản phát hành 1.
+- Nhược điểm: Rủi ro pháp lý, rủi ro uy tín, rủi ro bị cấm IP, và lo ngại về đạo đức khi vi phạm chính sách truy cập rõ ràng của máy chủ đích.
+- Lý do không chọn: Nằm ngoài phạm vi. Hoãn lại.
 
-### Alternative 2: Silent scraping without a compliance record
+### Phương án 2: Cào âm thầm không có hồ sơ tuân thủ
 
-- Pros: Faster to ship.
-- Cons: Impossibly hard to audit, impossible to defend in a review.
-- Why not: A documented record is a release-1 requirement.
+- Ưu điểm: Ship nhanh hơn.
+- Nhược điểm: Không thể kiểm toán, không thể bảo vệ trong review.
+- Lý do không chọn: Hồ sơ có tài liệu là yêu cầu bản phát hành 1.
 
-### Alternative 3: One global kill switch
+### Phương án 3: Một kill switch toàn cục
 
-- Pros: Trivial implementation.
-- Cons: Cannot disable a single bad source without disabling the whole
-  pipeline.
-- Why not: Per-source granularity is required by the alerting story in
-  Phase 8.
+- Ưu điểm: Triển khai tầm thường.
+- Nhược điểm: Không thể tắt một nguồn xấu mà không tắt cả pipeline.
+- Lý do không chọn: Cần độ chi tiết theo nguồn cho câu chuyện cảnh báo ở Giai đoạn 8.
 
-## Consequences
+## Hệ quả
 
-- Positive: Auditable, defensible, and reversible. Each source can be
-  disabled in seconds.
-- Negative: Some sources (TikTok, Northrop, and others with strong anti-bot)
-  are deferred. They can come back in a later release once a compliance path
-  is found.
-- Risks: A future engineer might be tempted to add a bypass "just for
-  testing." Mitigation: the kill switch is enforced by tests in Phase 7, and
-  the registry refuses to load bypass-flagged adapters.
+- Tích cực: Có thể kiểm toán, có thể bảo vệ, và có thể đảo ngược. Mỗi nguồn có thể tắt trong vài giây.
+- Tiêu cực: Một số nguồn (TikTok, Northrop, và các nguồn có anti-bot mạnh khác) bị hoãn. Chúng có thể quay lại ở bản sau khi tìm được lối tuân thủ.
+- Rủi ro: Kỹ sư tương lai có thể bị cám dỗ thêm bypass "chỉ để test". Giảm thiểu: kill switch được kiểm thử ở Giai đoạn 7, và registry từ chối nạp adapter có cờ bypass.
 
-## Open questions
+## Câu hỏi mở
 
-- None at M0. The deferred list lives in `ROADMAP.md` "Deferred scope".
+- Không có tại M0. Danh sách hoãn nằm trong mục "Phạm vi hoãn" của `ROADMAP.md`.

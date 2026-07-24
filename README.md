@@ -1,142 +1,142 @@
 # job-board-scraper
 
-Async ETL pipeline that scrapes job listings from 11+ company career pages and aggregates them into a single normalized database. Implemented in Python 3.11+ on top of `asyncio`, `httpx`, `pydantic`, and `SQLAlchemy 2`.
+Pipeline ETL bất đồng bộ dùng để thu thập danh sách việc làm từ hơn 11 trang tuyển dụng của các công ty, tổng hợp về một cơ sở dữ liệu chuẩn hóa duy nhất. Được viết bằng Python 3.11+ trên nền tảng `asyncio`, `httpx`, `pydantic` và `SQLAlchemy 2`.
 
-> **Status:** Phase 9 (Docker + PostgreSQL + CI hardening) complete. See [docs/ROADMAP.md](docs/ROADMAP.md) for the single source of truth on progress.
+> **Trạng thái:** Giai đoạn 9 (Docker + PostgreSQL + CI cứng hóa) đã hoàn thành. Xem [docs/ROADMAP.md](docs/ROADMAP.md) để biết nguồn dữ liệu duy nhất về tiến độ.
 
-## Architecture
+## Kiến trúc
 
 ```
-ORCHESTRATOR (external scheduler or APScheduler)
+BỘ ĐIỀU PHỐI (lập lịch ngoài hoặc APScheduler)
    │
    ▼
-ETL PIPELINE
-   EXTRACT (adapters) → TRANSFORM → DEDUPE → LOAD → REPORT
+PIPELINE ETL
+   TRÍCH XUẤT (adapter) → BIẾN ĐỔI → KHỬ TRÙNG LẶP → TẢI LÊN → BÁO CÁO
    │
    ▼
-MONITORING (AlertManager + MetricsCollector)
+GIÁM SÁT (AlertManager + MetricsCollector)
 ```
 
-Three adapter families:
+Ba họ adapter:
 
-| Family | Difficulty | Examples (current manifest) |
+| Họ | Độ khó | Ví dụ (manifest hiện tại) |
 | --- | --- | --- |
-| API/ATS | low | OPSWAT, Vancity (synthetic fixtures until approved) |
-| HTML | medium | TechCorp, StartupXYZ (static page scraping) |
-| Browser | high | TikTok, Northrop Grumman — **deferred for release 1** under [ADR-0007](docs/adr/0007-compliance.md) |
+| API/ATS | thấp | OPSWAT, Vancity (bộ dữ liệu giả lập đến khi được duyệt) |
+| HTML | trung bình | TechCorp, StartupXYZ (cào trang tĩnh) |
+| Trình duyệt | cao | TikTok, Northrop Grumman — **hoãn đến bản phát hành 1** theo [ADR-0007](docs/adr/0007-compliance.md) |
 
-For the full architectural contract read [docs/TECHNICAL.md](docs/TECHNICAL.md), and for the phased plan read [docs/ROADMAP.md](docs/ROADMAP.md).
+Để đọc đầy đủ hợp đồng kiến trúc, xem [docs/TECHNICAL.md](docs/TECHNICAL.md); để đọc kế hoạch theo giai đoạn, xem [docs/ROADMAP.md](docs/ROADMAP.md).
 
-## Repository layout
+## Cấu trúc thư mục
 
 ```
 job-board-scraper/
-├── pyproject.toml        # Poetry metadata + tool config (ruff, pyright, pytest, coverage)
-├── Dockerfile            # Multi-stage image: builder → runtime → runtime-browser
-├── docker-compose.yml    # Local dev stack (PostgreSQL + scraper)
-├── README.md             # This file
-├── .env.example          # Placeholder-only environment template
-├── docs/                 # PLAN.md, TECHNICAL.md, ROADMAP.md, ADRs, source manifest
-├── src/                  # Application source
-├── tests/                # Unit + integration + e2e tests
-├── scripts/              # Operational scripts (init_db, seed_companies, run_scrape)
-├── migrations/           # Alembic schema migrations
-├── config/              # Per-adapter configs
-├── data/                 # SQLite database + CSV reports
-└── logs/                 # Structured log output
+├── pyproject.toml        # Metadata Poetry + cấu hình công cụ (ruff, pyright, pytest, coverage)
+├── Dockerfile            # Image đa tầng: builder → runtime → runtime-browser
+├── docker-compose.yml    # Stack phát triển cục bộ (PostgreSQL + scraper)
+├── README.md             # Tài liệu này
+├── .env.example          # Mẫu biến môi trường chỉ chứa giá trị giữ chỗ
+├── docs/                 # PLAN.md, TECHNICAL.md, ROADMAP.md, ADR, manifest nguồn
+├── src/                  # Mã nguồn ứng dụng
+├── tests/                # Unit + integration + e2e
+├── scripts/              # Script vận hành (init_db, seed_companies, run_scrape)
+├── migrations/           # Migration schema Alembic
+├── config/              # Cấu hình riêng cho từng adapter
+├── data/                 # Cơ sở dữ liệu SQLite + báo cáo CSV
+└── logs/                 # Log có cấu trúc
 ```
 
-## Tooling
+## Công cụ
 
-| Tool | Purpose |
+| Công cụ | Mục đích |
 | --- | --- |
-| Python 3.11+ | Runtime |
-| Poetry | Dependency management and lockfile |
-| Pydantic 2 / pydantic-settings 2 | Settings + domain contracts |
-| pytest + pytest-asyncio + pytest-cov | Test runner |
-| Ruff | Linter and formatter |
-| Pyright | Static type checker |
-| detect-secrets | Secret scanner |
+| Python 3.11+ | Môi trường chạy |
+| Poetry | Quản lý phụ thuộc và lockfile |
+| Pydantic 2 / pydantic-settings 2 | Cấu hình + hợp đồng miền |
+| pytest + pytest-asyncio + pytest-cov | Bộ chạy kiểm thử |
+| Ruff | Trình kiểm tra và định dạng mã |
+| Pyright | Kiểm tra kiểu tĩnh |
+| detect-secrets | Trình quét bí mật |
 
-## Quickstart (local development)
+## Hướng dẫn nhanh (phát triển cục bộ)
 
-These steps assume Python 3.11+ is on the path.
+Các bước dưới đây giả định Python 3.11+ đã có trong PATH.
 
 ```powershell
-# 1. Create the local virtual environment (already done if .venv exists).
+# 1. Tạo môi trường ảo cục bộ (bỏ qua nếu .venv đã tồn tại)
 python -m venv .venv
 
-# 2. Install runtime + dev dependencies.
+# 2. Cài đặt phụ thuộc runtime + phát triển
 .venv\Scripts\python.exe -m pip install -e ".[dev]"
 
-# 3. Initialize the database (idempotent — safe to re-run).
+# 3. Khởi tạo cơ sở dữ liệu (idempotent — an toàn khi chạy lại)
 .venv\Scripts\python.exe scripts\init_db.py
 
-# 4. Seed company records from the source manifest (idempotent).
+# 4. Gieo dữ liệu công ty từ manifest nguồn (idempotent)
 .venv\Scripts\python.exe scripts\seed_companies.py
 
-# 5. Run the scraper (all companies, dry-run first).
+# 5. Chạy scraper (tất cả công ty, chạy thử trước)
 .venv\Scripts\python.exe scripts\run_scrape.py --dry-run
 .venv\Scripts\python.exe scripts\run_scrape.py
 
-# 6. Run the test suite.
+# 6. Chạy bộ kiểm thử
 .venv\Scripts\python.exe -m pytest
 
-# 7. Run the lint / format / type checks.
+# 7. Kiểm tra định dạng / lint / kiểu
 .venv\Scripts\python.exe -m ruff format .
 .venv\Scripts\python.exe -m ruff check .
 .venv\Scripts\python.exe -m pyright src tests
 ```
 
-If `.\.venv\Scripts\python.exe` is on `PATH` instead, drop the prefix in the snippets above.
+Nếu `.\.venv\Scripts\python.exe` đã có sẵn trong `PATH`, hãy bỏ phần tiền tố đó đi.
 
-## Docker (recommended for production)
+## Docker (khuyến nghị cho môi trường production)
 
-The production runtime is a **one-shot container** driven by an external scheduler (Kubernetes CronJob, Cloud Scheduler, etc.) per [ADR-0006](docs/adr/0006-scheduler-export.md).
+Môi trường runtime production là **container chạy một lần** được điều khiển bởi bộ lập lịch ngoài (Kubernetes CronJob, Cloud Scheduler, v.v.) theo [ADR-0006](docs/adr/0006-scheduler-export.md).
 
-### Build the image
+### Build image
 
 ```bash
-# Standard image (no browser automation)
+# Image tiêu chuẩn (không có tự động hóa trình duyệt)
 docker build --target runtime -t job-board-scraper:latest .
 
-# Image with Playwright + Chromium (only needed when browser sources are approved)
+# Image kèm Playwright + Chromium (chỉ cần khi các nguồn trình duyệt được duyệt)
 docker build --target runtime-browser -t job-board-scraper:browser .
 ```
 
-### Run with docker-compose (local PostgreSQL)
+### Chạy với docker-compose (PostgreSQL cục bộ)
 
 ```bash
-# Start PostgreSQL and run the scraper against it
+# Khởi động PostgreSQL và chạy scraper trỏ vào đó
 docker compose up --build postgres scraper
 
-# Run a single scrape with dry-run
+# Chạy một lần cào thử (dry-run)
 docker compose run --rm scraper python -m job_board_scraper.cli run --dry-run
 
-# Run a specific company
+# Chạy cho một công ty cụ thể
 docker compose run --rm scraper python -m job_board_scraper.cli run -c opswat
 
-# Initialize the database
+# Khởi tạo cơ sở dữ liệu
 docker compose run --rm scraper python -m job_board_scraper.cli init-db
 
-# Seed companies
+# Gieo dữ liệu công ty
 docker compose run --rm scraper python -m job_board_scraper.cli seed
 
-# Export jobs to CSV
+# Xuất danh sách việc làm ra CSV
 docker compose run --rm scraper python -m job_board_scraper.cli export -o /app/data/jobs.csv
 
-# Shell into the container
+# Truy cập shell của container
 docker compose run --rm --entrypoint bash scraper
 ```
 
-### Run standalone (external PostgreSQL)
+### Chạy độc lập (PostgreSQL ngoài)
 
 ```bash
-# Set environment
+# Thiết lập biến môi trường
 export DATABASE_URL="postgresql+asyncpg://jobs:password@host:5432/jobs"
 export LOG_LEVEL="INFO"
 
-# Run
+# Chạy
 docker run --rm \
   -e DATABASE_URL \
   -e LOG_LEVEL \
@@ -146,57 +146,57 @@ docker run --rm \
   python -m job_board_scraper.cli run
 ```
 
-### Environment variables
+### Biến môi trường
 
-| Variable | Default | Description |
+| Biến | Mặc định | Mô tả |
 | --- | --- | --- |
-| `DATABASE_URL` | `sqlite+aiosqlite:///./data/jobs.db` | Async database DSN |
-| `LOG_LEVEL` | `INFO` | Minimum log level |
-| `LOG_FILE` | `./logs/scraper.log` | Log file path |
-| `SCHEDULER_ENABLED` | `false` | Enable APScheduler (local only) |
-| `PLAYWRIGHT_BROWSERS_INSTALLED` | `false` | Set true when using browser target |
-| `ALERT_EMAIL_ENABLED` | `false` | Enable email alerting |
-| `ALERT_SLACK_WEBHOOK` | (empty) | Slack webhook URL |
-| `EXPORT_DIR` | `./data` | CSV export directory |
+| `DATABASE_URL` | `sqlite+aiosqlite:///./data/jobs.db` | Chuỗi kết nối cơ sở dữ liệu bất đồng bộ |
+| `LOG_LEVEL` | `INFO` | Mức log tối thiểu |
+| `LOG_FILE` | `./logs/scraper.log` | Đường dẫn file log |
+| `SCHEDULER_ENABLED` | `false` | Bật APScheduler (chỉ dành cho môi trường cục bộ) |
+| `PLAYWRIGHT_BROWSERS_INSTALLED` | `false` | Đặt true khi dùng target có trình duyệt |
+| `ALERT_EMAIL_ENABLED` | `false` | Bật cảnh báo qua email |
+| `ALERT_SLACK_WEBHOOK` | (rỗng) | URL webhook Slack |
+| `EXPORT_DIR` | `./data` | Thư mục xuất CSV |
 
-## CLI Reference
+## Tham chiếu CLI
 
-The CLI supports subcommands:
+CLI hỗ trợ các lệnh con:
 
 ```bash
-# Run scrape
-job-board-scraper run              # All active companies
-job-board-scraper run -c opswat   # Single company
-job-board-scraper run --dry-run   # No database writes
+# Chạy cào
+job-board-scraper run              # Tất cả công ty đang hoạt động
+job-board-scraper run -c opswat   # Một công ty cụ thể
+job-board-scraper run --dry-run   # Không ghi vào cơ sở dữ liệu
 
-# Database
-job-board-scraper init-db         # Create tables
-job-board-scraper seed            # Seed companies
+# Cơ sở dữ liệu
+job-board-scraper init-db         # Tạo bảng
+job-board-scraper seed            # Gieo dữ liệu công ty
 
-# Export
-job-board-scraper export          # Export open jobs to CSV
-job-board-scraper export --all    # Include closed jobs
+# Xuất dữ liệu
+job-board-scraper export          # Xuất việc đang tuyển ra CSV
+job-board-scraper export --all    # Bao gồm cả việc đã đóng
 ```
 
-Exit codes: `0` = success, `1` = partial, `2` = failed
+Mã thoát: `0` = thành công, `1` = một phần, `2` = thất bại.
 
-## Configuration
+## Cấu hình
 
-Configuration is environment-driven; no secrets are committed to the repo. See [`.env.example`](.env.example) for the full placeholder template. Real values come from the operator's environment variable store (Kubernetes Secret, AWS Secrets Manager, GitHub Actions secret, etc.).
+Cấu hình được điều khiển qua biến môi trường; không có bí mật nào được commit vào repo. Xem [`.env.example`](.env.example) để lấy mẫu giữ chỗ đầy đủ. Giá trị thật được lấy từ kho bí mật của người vận hành (Kubernetes Secret, AWS Secrets Manager, GitHub Actions secret, v.v.).
 
-## Deployment options
+## Tùy chọn triển khai
 
-| Target | How | Notes |
+| Mục tiêu | Cách thực hiện | Ghi chú |
 | --- | --- | --- |
-| Local / dev | Python direct + SQLite | `python scripts/run_scrape.py` |
-| Local / prod-like | docker compose + PostgreSQL | `docker compose up scraper` |
-| Cloud / production | One-shot container + external scheduler | See ADR-0006 |
-| CI / tests | GitHub Actions matrix | PostgreSQL service in `.github/workflows/ci.yml` |
+| Cục bộ / phát triển | Python trực tiếp + SQLite | `python scripts/run_scrape.py` |
+| Cục bộ / giống production | docker compose + PostgreSQL | `docker compose up scraper` |
+| Cloud / production | Container một lần + bộ lập lịch ngoài | Xem ADR-0006 |
+| CI / kiểm thử | Ma trận GitHub Actions | Service PostgreSQL trong `.github/workflows/ci.yml` |
 
-## Compliance and source policy
+## Tuân thủ và chính sách nguồn
 
-We do not bypass access controls, solve CAPTCHAs, or rotate residential proxies. Each of the 11 sources listed in [docs/sources/manifest.md](docs/sources/manifest.md) has a written decision in [docs/sources/compliance-notes.md](docs/sources/compliance-notes.md). Sources whose compliance status is not `approved` are loaded with `is_active: false` and cannot be enabled without a new ADR.
+Chúng tôi không vượt qua kiểm soát truy cập, không giải CAPTCHA, không luân phiên proxy dân cư. Mỗi nguồn trong số 11 nguồn được liệt kê ở [docs/sources/manifest.md](docs/sources/manifest.md) đều có quyết định được viết rõ trong [docs/sources/compliance-notes.md](docs/sources/compliance-notes.md). Nguồn có trạng thái tuân thủ khác `approved` được nạp với `is_active: false` và không thể bật nếu không có ADR mới.
 
-## License
+## Giấy phép
 
-Proprietary — internal use only.
+Sở hữu riêng — chỉ sử dụng nội bộ.

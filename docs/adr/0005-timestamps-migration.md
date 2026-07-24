@@ -1,83 +1,64 @@
 # ADR 0005 — Timestamps & database migration
 
-- Status: Accepted
-- Date: 2026-07-15
-- Phase: 0 (Scope & Decisions)
-- Authors: Tech Lead
-- Supersedes: none
+- Trạng thái: Đã chấp nhận
+- Ngày: 2026-07-15
+- Giai đoạn: 0 (Phạm vi & Quyết định)
+- Tác giả: Tech Lead
+- Thay thế: không
 
-## Context
+## Bối cảnh
 
-`PLAN.md` and `TECHNICAL.md` do not currently specify a timezone policy. The
-project must run in Vietnam (UTC+7) and in CI/cloud environments that default
-to UTC. A naive timestamp that assumes "local time" causes off-by-N-hours
-bugs that are extremely painful to debug.
+`PLAN.md` và `TECHNICAL.md` hiện chưa quy định chính sách múi giờ. Dự án phải chạy ở Việt Nam (UTC+7) và trong các môi trường CI/cloud mặc định theo UTC. Timestamp naive giả định "giờ địa phương" gây ra lỗi lệch N giờ rất khó gỡ.
 
-In addition, the project must run on SQLite locally and on PostgreSQL in
-production. `TECHNICAL.md` lists `SQLAlchemy` + `aiosqlite` but does not lock
-down how schema changes are applied.
+Ngoài ra, dự án phải chạy trên SQLite cục bộ và PostgreSQL ở production. `TECHNICAL.md` liệt kê `SQLAlchemy` + `aiosqlite` nhưng chưa chốt cách áp dụng thay đổi schema.
 
-## Decision
+## Quyết định
 
 ### Timestamps
 
-- All timestamps in code, logs, and the database are stored in UTC.
-- All SQLAlchemy columns use `DateTime(timezone=True)` mapped onto
-  `TIMESTAMP WITH TIME ZONE` on PostgreSQL and ISO-8601 strings on SQLite.
-- Pydantic models expose `datetime` fields that are timezone-aware; the
-  validator rejects naive datetimes with a clear error.
-- The CLI prints timestamps in UTC by default and accepts an optional
-  `--tz` flag for display only.
+- Mọi timestamp trong mã, log và cơ sở dữ liệu đều được lưu theo UTC.
+- Mọi cột SQLAlchemy dùng `DateTime(timezone=True)`, ánh xạ sang `TIMESTAMP WITH TIME ZONE` trên PostgreSQL và chuỗi ISO-8601 trên SQLite.
+- Mô hình Pydantic phơi ra trường `datetime` có nhận thức múi giờ; validator từ chối datetime naive với thông báo rõ ràng.
+- CLI in timestamp theo UTC mặc định và chấp nhận cờ `--tz` chỉ dùng cho hiển thị.
 
-### Migrations
+### Migration
 
-- Use **Alembic** as the authoritative migration tool. SQLAlchemy `metadata.create_all`
-  is **not** an acceptable substitute for environments where `init_db` runs
-  against existing data.
-- Migrations are tested on both SQLite and PostgreSQL during Phase 2 (CI
-  matrix) and again in Phase 9 (release hardening).
-- Each migration file must contain both `upgrade()` and `downgrade()` and must
-  be reversible without data loss for the columns we care about (URL,
-  status, timestamps).
+- Dùng **Alembic** làm công cụ migration có thẩm quyền. `metadata.create_all` của SQLAlchemy **không** phải giải pháp thay thế được chấp nhận cho môi trường `init_db` chạy trên dữ liệu đã tồn tại.
+- Migration được kiểm thử trên cả SQLite và PostgreSQL trong Giai đoạn 2 (ma trận CI) và một lần nữa trong Giai đoạn 9 (cứng hoá bản phát hành).
+- Mỗi file migration phải có cả `upgrade()` và `downgrade()` và phải đảo ngược được không mất dữ liệu đối với các cột ta quan tâm (URL, status, timestamps).
 
 ### Database engine
 
-- Local dev and tests: `sqlite+aiosqlite:///./data/jobs.db`.
-- Production: `postgresql+asyncpg://...`, with the DSN injected via
-  environment variable `DATABASE_URL`.
-- SQLAlchemy 2.x async API only.
+- Dev và test cục bộ: `sqlite+aiosqlite:///./data/jobs.db`.
+- Production: `postgresql+asyncpg://...`, DSN được tiêm qua biến môi trường `DATABASE_URL`.
+- Chỉ dùng API bất đồng bộ SQLAlchemy 2.x.
 
-## Alternatives Considered
+## Các phương án đã xét
 
-### Alternative 1: Store local time (Asia/Ho_Chi_Minh)
+### Phương án 1: Lưu giờ địa phương (Asia/Ho_Chi_Minh)
 
-- Pros: Operator comfort in Vietnam.
-- Cons: DST / daylight savings drift in other environments, ambiguous audit
-  trail, harder CI reproducibility.
-- Why not: UTC is the only safe default for a multi-timezone project.
+- Ưu điểm: Người vận hành ở Việt Nam dễ chịu.
+- Nhược điểm: Trôi DST/giờ mùa hè ở môi trường khác, audit trail mơ hồ, khó tái lập CI.
+- Lý do không chọn: UTC là giá trị mặc định an toàn duy nhất cho dự án đa múi giờ.
 
-### Alternative 2: `metadata.create_all()` only, no Alembic
+### Phương án 2: Chỉ `metadata.create_all()`, không Alembic
 
-- Pros: Zero migration tooling.
-- Cons: Cannot evolve the schema in production without data loss, cannot
-  downgrade, no audit trail.
-- Why not: Phase 2 explicitly requires Alembic.
+- Ưu điểm: Không cần công cụ migration.
+- Nhược điểm: Không thể tiến hoá schema ở production mà không mất dữ liệu, không downgrade được, không có audit trail.
+- Lý do không chọn: Giai đoạn 2 yêu cầu rõ Alembic.
 
-### Alternative 3: Plain SQL files, no ORM migration tool
+### Phương án 3: File SQL thuần, không ORM migration tool
 
-- Pros: Full control.
-- Cons: Easy to drift from SQLAlchemy models, harder to test, no
-  autogenerate for minor changes.
-- Why not: Alembic already integrates with our chosen ORM.
+- Ưu điểm: Toàn quyền kiểm soát.
+- Nhược điểm: Dễ trôi khỏi mô hình SQLAlchemy, khó kiểm thử hơn, không có autogenerate cho thay đổi nhỏ.
+- Lý do không chọn: Alembic đã tích hợp sẵn với ORM ta chọn.
 
-## Consequences
+## Hệ quả
 
-- Positive: Reproducible runs across timezones; schema is reversible; CI
-  catches drift early.
-- Negative: One more dependency (Alembic) and a migration test matrix.
-- Risks: PostgreSQL/SQLite type parity. Mitigation: the Phase 2 dual-engine
-  test gates every migration.
+- Tích cực: Run tái lập được xuyên múi giờ; schema đảo ngược được; CI bắt drift sớm.
+- Tiêu cực: Thêm một phụ thuộc (Alembic) và ma trận kiểm thử migration.
+- Rủi ro: Chênh lệch kiểu PostgreSQL/SQLite. Giảm thiểu: kiểm thử hai engine ở Giai đoạn 2 chặn mọi migration.
 
-## Open questions
+## Câu hỏi mở
 
-- None at M0. CI matrix shape is finalised in Phase 9.
+- Không có tại M0. Hình dạng ma trận CI được chốt ở Giai đoạn 9.

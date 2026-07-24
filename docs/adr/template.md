@@ -1,38 +1,36 @@
-# ADR-NNNN: [Decision Title]
+# ADR-NNNN: [Tiêu đề quyết định]
 
-- Status: Draft | Accepted | Deprecated | Superseded by ADR-NNNN
-- Date: YYYY-MM-DD
-- Phase: [0–9]
-- Authors: [names]
+- Trạng thái: Bản nháp | Đã chấp nhận | Ngừng dùng | Bị thay thế bởi ADR-NNNN
+- Ngày: YYYY-MM-DD
+- Giai đoạn: [0–9]
+- Tác giả: [tên]
 
-## Context
+## Bối cảnh
 
-What is the issue we are seeing that motivates this decision? Reference the
-sections of `PLAN.md` / `TECHNICAL.md` that drove the question.
+Vấn đề chúng ta đang gặp phải là gì mà thúc đẩy quyết định này? Tham chiếu các mục trong `PLAN.md` / `TECHNICAL.md` đã đặt ra câu hỏi.
 
-## Decision
+## Quyết định
 
-State the decision in 1–3 sentences. Include enough detail that an implementer
-can act on it without re-reading the conversation that produced it.
+Phát biểu quyết định trong 1–3 câu. Đưa vào đủ chi tiết để người triển khai có thể hành động mà không cần đọc lại cuộc thảo luận đã tạo ra nó.
 
-## Alternatives Considered
+## Các phương án đã xét
 
-### Alternative 1: [Name]
-- Pros:
-- Cons:
-- Why not:
+### Phương án 1: [Tên]
+- Ưu điểm:
+- Nhược điểm:
+- Lý do không chọn:
 
-### Alternative 2: [Name]
-- Pros:
-- Cons:
-- Why not:
+### Phương án 2: [Tên]
+- Ưu điểm:
+- Nhược điểm:
+- Lý do không chọn:
 
-## Consequences
+## Hệ quả
 
-- Positive: ...
-- Negative: ...
-- Risks: ...
+- Tích cực: ...
+- Tiêu cực: ...
+- Rủi ro: ...
 
-## Open questions
+## Câu hỏi mở
 
 - ...
