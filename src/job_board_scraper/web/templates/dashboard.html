@@ -1,12 +1,12 @@
 {% extends "base.html" %}
 
-{% block title %}Dashboard - Job Board Scraper{% endblock %}
+{% block title %}{{ t('nav.dashboard') }} - Job Board Scraper{% endblock %}
 
 {% block content %}
 <div class="row mb-4">
     <div class="col-12">
-        <h1 class="h3 mb-0 text-gray-800">Dashboard</h1>
-        <p class="text-muted">Overview of job scraping operations</p>
+        <h1 class="h3 mb-0 text-gray-800"><span data-i18n="nav.dashboard">{{ t('nav.dashboard') }}</span></h1>
+        <p class="text-muted"><span data-i18n="dashboard.title">{{ t('dashboard.title') }}</span></p>
     </div>
 </div>
 
@@ -27,7 +27,7 @@
                         </div>
                     </div>
                     <div class="flex-grow-1 ms-3">
-                        <h6 class="text-muted text-uppercase mb-1 small">Total Jobs</h6>
+                        <h6 class="text-muted text-uppercase mb-1 small"><span data-i18n="dashboard.stat_total_jobs">{{ t('dashboard.stat_total_jobs') }}</span></h6>
                         <h3 class="mb-0">{{ stats.total_jobs }}</h3>
                     </div>
                 </div>
@@ -54,7 +54,7 @@
                         </div>
                     </div>
                     <div class="flex-grow-1 ms-3">
-                        <h6 class="text-muted text-uppercase mb-1 small">Companies</h6>
+                        <h6 class="text-muted text-uppercase mb-1 small"><span data-i18n="dashboard.stat_companies">{{ t('dashboard.stat_companies') }}</span></h6>
                         <h3 class="mb-0">{{ stats.total_companies }}</h3>
                     </div>
                 </div>
@@ -75,7 +75,7 @@
                         </div>
                     </div>
                     <div class="flex-grow-1 ms-3">
-                        <h6 class="text-muted text-uppercase mb-1 small">Total Runs</h6>
+                        <h6 class="text-muted text-uppercase mb-1 small"><span data-i18n="dashboard.stat_total_runs">{{ t('dashboard.stat_total_runs') }}</span></h6>
                         <h3 class="mb-0">{{ stats.total_runs }}</h3>
                     </div>
                 </div>
@@ -95,7 +95,7 @@
                         </div>
                     </div>
                     <div class="flex-grow-1 ms-3">
-                        <h6 class="text-muted text-uppercase mb-1 small">Open Jobs</h6>
+                        <h6 class="text-muted text-uppercase mb-1 small"><span data-i18n="dashboard.stat_open_jobs">{{ t('dashboard.stat_open_jobs') }}</span></h6>
                         <h3 class="mb-0">{{ stats.open_jobs }}</h3>
                     </div>
                 </div>
@@ -109,17 +109,17 @@
     <div class="col-12">
         <div class="card border-0 shadow-sm">
             <div class="card-header bg-white py-3">
-                <h5 class="mb-0">Last Scrape Run</h5>
+                <h5 class="mb-0"><span data-i18n="dashboard.card_last_run">{{ t('dashboard.card_last_run') }}</span></h5>
             </div>
             <div class="card-body">
                 {% if last_run %}
                 <div class="row align-items-center">
                     <div class="col-md-4">
-                        <p class="mb-1 text-muted small">Started</p>
+                        <p class="mb-1 text-muted small"><span data-i18n="dashboard.col_started">{{ t('dashboard.col_started') }}</span></p>
                         <p class="mb-0 fw-medium">{{ last_run.started_at.strftime('%Y-%m-%d %H:%M:%S') }}</p>
                     </div>
                     <div class="col-md-2">
-                        <p class="mb-1 text-muted small">Duration</p>
+                        <p class="mb-1 text-muted small"><span data-i18n="dashboard.col_duration">{{ t('dashboard.col_duration') }}</span></p>
                         <p class="mb-0 fw-medium">
                             {% if last_run.duration_seconds %}
                                 {{ "%.1f"|format(last_run.duration_seconds) }}s
@@ -129,11 +129,11 @@
                         </p>
                     </div>
                     <div class="col-md-2">
-                        <p class="mb-1 text-muted small">Jobs Found</p>
+                        <p class="mb-1 text-muted small"><span data-i18n="dashboard.col_jobs_found">{{ t('dashboard.col_jobs_found') }}</span></p>
                         <p class="mb-0 fw-medium">{{ last_run.total_jobs_found }}</p>
                     </div>
                     <div class="col-md-2">
-                        <p class="mb-1 text-muted small">Status</p>
+                        <p class="mb-1 text-muted small"><span data-i18n="dashboard.col_status">{{ t('dashboard.col_status') }}</span></p>
                         {% set status_class = {
                             'success': 'bg-success',
                             'partial': 'bg-warning',
@@ -141,18 +141,18 @@
                             'running': 'bg-info',
                             'cancelled': 'bg-secondary'
                         } %}
-                        <span class="badge {{ status_class.get(last_run.status, 'bg-secondary') }}">
-                            {{ last_run.status|title }}
+                        <span class="badge {{ status_class.get(last_run.status, 'bg-secondary') }}" data-i18n="status.{{ last_run.status }}">
+                            {{ t('status.' ~ last_run.status) }}
                         </span>
                     </div>
                     <div class="col-md-2 text-end">
                         <a href="{{ url_for('run_detail', run_id=last_run.id) }}" class="btn btn-outline-primary btn-sm">
-                            View Details
+                            <span data-i18n="common.details">{{ t('common.details') }}</span>
                         </a>
                     </div>
                 </div>
                 {% else %}
-                <p class="text-muted mb-0">No scrape runs yet.</p>
+                <p class="text-muted mb-0"><span data-i18n="dashboard.no_runs">{{ t('dashboard.no_runs') }}</span></p>
                 {% endif %}
             </div>
         </div>
@@ -164,9 +164,9 @@
     <div class="col-12">
         <div class="card border-0 shadow-sm">
             <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
-                <h5 class="mb-0">Recent Scrape Runs</h5>
+                <h5 class="mb-0"><span data-i18n="dashboard.card_recent_runs">{{ t('dashboard.card_recent_runs') }}</span></h5>
                 <a href="{{ url_for('list_runs') }}" class="btn btn-outline-primary btn-sm">
-                    View All
+                    <span data-i18n="dashboard.view_all">{{ t('dashboard.view_all') }}</span>
                 </a>
             </div>
             <div class="card-body p-0">
@@ -174,14 +174,14 @@
                     <table class="table table-hover mb-0">
                         <thead class="table-light">
                             <tr>
-                                <th class="border-0">ID</th>
-                                <th class="border-0">Started</th>
-                                <th class="border-0">Duration</th>
-                                <th class="border-0">Jobs Found</th>
-                                <th class="border-0">New Jobs</th>
-                                <th class="border-0">Closed</th>
-                                <th class="border-0">Status</th>
-                                <th class="border-0">Actions</th>
+                                <th class="border-0"><span data-i18n="dashboard.col_id">{{ t('dashboard.col_id') }}</span></th>
+                                <th class="border-0"><span data-i18n="dashboard.col_started">{{ t('dashboard.col_started') }}</span></th>
+                                <th class="border-0"><span data-i18n="dashboard.col_duration">{{ t('dashboard.col_duration') }}</span></th>
+                                <th class="border-0"><span data-i18n="dashboard.col_jobs_found">{{ t('dashboard.col_jobs_found') }}</span></th>
+                                <th class="border-0"><span data-i18n="dashboard.col_new_jobs">{{ t('dashboard.col_new_jobs') }}</span></th>
+                                <th class="border-0"><span data-i18n="dashboard.col_closed">{{ t('dashboard.col_closed') }}</span></th>
+                                <th class="border-0"><span data-i18n="dashboard.col_status">{{ t('dashboard.col_status') }}</span></th>
+                                <th class="border-0"><span data-i18n="common.actions">{{ t('common.actions') }}</span></th>
                             </tr>
                         </thead>
                         <tbody>
@@ -208,20 +208,20 @@
                                             'running': 'bg-info',
                                             'cancelled': 'bg-secondary'
                                         } %}
-                                        <span class="badge {{ status_class.get(run.status, 'bg-secondary') }}">
-                                            {{ run.status|title }}
+                                        <span class="badge {{ status_class.get(run.status, 'bg-secondary') }}" data-i18n="status.{{ run.status }}">
+                                            {{ t('status.' ~ run.status) }}
                                         </span>
                                     </td>
                                     <td class="align-middle">
                                         <a href="{{ url_for('run_detail', run_id=run.id) }}" class="btn btn-outline-secondary btn-sm">
-                                            Details
+                                            <span data-i18n="common.details">{{ t('common.details') }}</span>
                                         </a>
                                     </td>
                                 </tr>
                                 {% endfor %}
                             {% else %}
                                 <tr>
-                                    <td colspan="8" class="text-center text-muted py-4">No scrape runs yet.</td>
+                                    <td colspan="8" class="text-center text-muted py-4"><span data-i18n="dashboard.no_runs">{{ t('dashboard.no_runs') }}</span></td>
                                 </tr>
                             {% endif %}
                         </tbody>

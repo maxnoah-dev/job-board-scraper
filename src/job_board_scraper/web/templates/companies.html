@@ -1,12 +1,12 @@
 {% extends "base.html" %}
 
-{% block title %}Companies - Job Board Scraper{% endblock %}
+{% block title %}{{ t('nav.companies') }} - Job Board Scraper{% endblock %}
 
 {% block content %}
 <div class="row mb-4">
     <div class="col-12">
-        <h1 class="h3 mb-0 text-gray-800">Companies</h1>
-        <p class="text-muted">All job sources being tracked</p>
+        <h1 class="h3 mb-0 text-gray-800"><span data-i18n="nav.companies">{{ t('nav.companies') }}</span></h1>
+        <p class="text-muted"><span data-i18n="companies.title">{{ t('companies.title') }}</span></p>
     </div>
 </div>
 
@@ -16,13 +16,13 @@
             <table class="table table-hover mb-0">
                 <thead class="table-light">
                     <tr>
-                        <th class="border-0">Company</th>
-                        <th class="border-0">Adapter Type</th>
-                        <th class="border-0">Status</th>
-                        <th class="border-0">Jobs</th>
-                        <th class="border-0">Open Jobs</th>
-                        <th class="border-0">Last Run</th>
-                        <th class="border-0">Actions</th>
+                        <th class="border-0"><span data-i18n="jobs.col_company">{{ t('jobs.col_company') }}</span></th>
+                        <th class="border-0"><span data-i18n="companies.col_adapter">{{ t('companies.col_adapter') }}</span></th>
+                        <th class="border-0"><span data-i18n="companies.col_status">{{ t('companies.col_status') }}</span></th>
+                        <th class="border-0"><span data-i18n="companies.col_jobs">{{ t('companies.col_jobs') }}</span></th>
+                        <th class="border-0"><span data-i18n="companies.col_open_jobs">{{ t('companies.col_open_jobs') }}</span></th>
+                        <th class="border-0"><span data-i18n="companies.col_last_run">{{ t('companies.col_last_run') }}</span></th>
+                        <th class="border-0"><span data-i18n="common.actions">{{ t('common.actions') }}</span></th>
                     </tr>
                 </thead>
                 <tbody>
@@ -42,15 +42,15 @@
                                     'html': 'bg-info',
                                     'browser': 'bg-warning text-dark'
                                 } %}
-                                <span class="badge {{ adapter_class.get(company.adapter_type, 'bg-secondary') }}">
-                                    {{ company.adapter_type|upper }}
+                                <span class="badge {{ adapter_class.get(company.adapter_type, 'bg-secondary') }}" data-i18n="adapter.{{ company.adapter_type }}">
+                                    {{ t('adapter.' ~ company.adapter_type) }}
                                 </span>
                             </td>
                             <td class="align-middle">
                                 {% if company.is_active %}
-                                    <span class="badge bg-success">Active</span>
+                                    <span class="badge bg-success" data-i18n="status.active">{{ t('status.active') }}</span>
                                 {% else %}
-                                    <span class="badge bg-secondary">Inactive</span>
+                                    <span class="badge bg-secondary" data-i18n="status.inactive">{{ t('status.inactive') }}</span>
                                 {% endif %}
                             </td>
                             <td class="align-middle">{{ company.total_jobs }}</td>
@@ -65,19 +65,19 @@
                                 {% if company.last_run_at %}
                                     {{ company.last_run_at.strftime('%Y-%m-%d %H:%M') }}
                                 {% else %}
-                                    <span class="text-muted">Never</span>
+                                    <span class="text-muted" data-i18n="companies.never">{{ t('companies.never') }}</span>
                                 {% endif %}
                             </td>
                             <td class="align-middle">
                                 <a href="{{ url_for('company_detail', slug=company.slug) }}" class="btn btn-outline-primary btn-sm">
-                                    View
+                                    <span data-i18n="common.view">{{ t('common.view') }}</span>
                                 </a>
                             </td>
                         </tr>
                         {% endfor %}
                     {% else %}
                         <tr>
-                            <td colspan="7" class="text-center text-muted py-4">No companies found.</td>
+                            <td colspan="7" class="text-center text-muted py-4"><span data-i18n="companies.no_companies">{{ t('companies.no_companies') }}</span></td>
                         </tr>
                     {% endif %}
                 </tbody>
@@ -88,15 +88,15 @@
 
 <!-- Pagination -->
 {% if total_pages > 1 %}
-<nav class="mt-4" aria-label="Pagination">
+<nav class="mt-4" data-i18n-attr="aria-label:common.pagination" aria-label="{{ t('common.pagination') }}">
     <ul class="pagination justify-content-center">
         {% if page > 1 %}
         <li class="page-item">
-            <a class="page-link" href="{{ url_for('list_companies', page=page-1) }}">Previous</a>
+            <a class="page-link" href="{{ url_for('list_companies', page=page-1) }}"><span data-i18n="common.previous">{{ t('common.previous') }}</span></a>
         </li>
         {% else %}
         <li class="page-item disabled">
-            <span class="page-link">Previous</span>
+            <span class="page-link"><span data-i18n="common.previous">{{ t('common.previous') }}</span></span>
         </li>
         {% endif %}
 
@@ -118,11 +118,11 @@
 
         {% if page < total_pages %}
         <li class="page-item">
-            <a class="page-link" href="{{ url_for('list_companies', page=page+1) }}">Next</a>
+            <a class="page-link" href="{{ url_for('list_companies', page=page+1) }}"><span data-i18n="common.next">{{ t('common.next') }}</span></a>
         </li>
         {% else %}
         <li class="page-item disabled">
-            <span class="page-link">Next</span>
+            <span class="page-link"><span data-i18n="common.next">{{ t('common.next') }}</span></span>
         </li>
         {% endif %}
     </ul>

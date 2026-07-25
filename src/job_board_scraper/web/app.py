@@ -10,12 +10,13 @@ from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 from job_board_scraper.core.database import close_db, init_db
+from job_board_scraper.web.i18n import DEFAULT_LOCALE, SUPPORTED_LOCALES, get_translator
 from job_board_scraper.web.routes import (
     api_router,
     companies_router,
@@ -69,6 +70,15 @@ def create_app() -> FastAPI:
     # Configure Jinja2 templates
     templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
 
+    # Register translation helper as a Jinja global so any template
+    # can call ``{{ t('nav.dashboard') }}`` without explicitly passing
+    # the locale into the context. The default locale is used for the
+    # initial SSR render; the frontend i18n.js swaps strings on the
+    # fly when the user changes language.
+    templates.env.globals["t"] = get_translator(DEFAULT_LOCALE)
+    templates.env.globals["current_locale"] = DEFAULT_LOCALE
+    templates.env.globals["supported_locales"] = SUPPORTED_LOCALES
+
     # Include routers
     app.include_router(dashboard_router, prefix="", tags=["Dashboard"])
     app.include_router(runs_router, prefix="", tags=["Runs"])
@@ -78,6 +88,22 @@ def create_app() -> FastAPI:
 
     # Store templates in app state for access in routes
     app.state.templates = templates
+
+    # Endpoint that exposes locale JSON to the frontend so i18n.js
+    # can swap strings without a full page reload.
+    import json
+
+    from job_board_scraper.web.i18n.translations import _load_locale
+
+    @app.get("/api/i18n/{locale}", tags=["API"])
+    async def get_locale(locale: str) -> Response:
+        if locale not in SUPPORTED_LOCALES:
+            locale = DEFAULT_LOCALE
+        data = _load_locale(locale)
+        return Response(
+            content=json.dumps(data, ensure_ascii=False),
+            media_type="application/json",
+        )
 
     return app
 

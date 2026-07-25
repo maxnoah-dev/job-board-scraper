@@ -3,17 +3,44 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}Job Board Scraper Dashboard{% endblock %}</title>
-    
+    <title>{% block title %}{{ t('app.title') }}{% endblock %}</title>
+
+    <!-- Inline init script: apply persisted language + theme BEFORE
+         any CSS or content renders, so the user never sees a flash
+         of the wrong language or theme. Values fall back to defaults
+         when localStorage is empty. -->
+    <script>
+        (function () {
+            try {
+                var lang = localStorage.getItem("jbs:lang");
+                if (lang !== "en" && lang !== "vi") lang = "en";
+                var theme = localStorage.getItem("jbs:theme");
+                if (theme !== "light" && theme !== "dark" && theme !== "auto") theme = "auto";
+                var resolved = theme === "auto"
+                    ? (window.matchMedia &&
+                        window.matchMedia("(prefers-color-scheme: dark)").matches
+                        ? "dark"
+                        : "light")
+                    : theme;
+                document.documentElement.setAttribute("lang", lang);
+                document.documentElement.setAttribute("data-bs-theme", resolved);
+                document.documentElement.setAttribute("data-jbs-theme", theme);
+            } catch (e) {
+                // localStorage unavailable, keep defaults.
+            }
+        })();
+    </script>
+
     <!-- Bootstrap 5 CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
-    
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0MJhjY6hW+ALEwIH" crossorigin="anonymous">
+
     <!-- Tailwind CSS via CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
-    
+
     <!-- Custom CSS -->
     <link rel="stylesheet" href="{{ url_for('static', path='/css/custom.css') }}">
-    
+    <link rel="stylesheet" href="{{ url_for('static', path='/css/theme.css') }}">
+
     {% block extra_head %}{% endblock %}
 </head>
 <body class="bg-gray-50 min-h-screen">
@@ -27,32 +54,80 @@
                     <line x1="8" y1="2" x2="8" y2="6"></line>
                     <line x1="3" y1="10" x2="21" y2="10"></line>
                 </svg>
-                Job Scraper
+                <span data-i18n="app.brand">{{ t('app.brand') }}</span>
             </a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" data-i18n-attr="aria-label:nav.toggle_menu" aria-label="{{ t('nav.toggle_menu') }}">
                 <span class="navbar-toggler-icon"></span>
             </button>
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav ms-auto">
                     <li class="nav-item">
                         <a class="nav-link {% if request.url.path == '/dashboard' or request.url.path == '/' %}active{% endif %}" href="{{ url_for('dashboard') }}">
-                            Dashboard
+                            <span data-i18n="nav.dashboard">{{ t('nav.dashboard') }}</span>
                         </a>
                     </li>
                     <li class="nav-item">
                         <a class="nav-link {% if '/runs' in request.url.path %}active{% endif %}" href="{{ url_for('list_runs') }}">
-                            Runs
+                            <span data-i18n="nav.runs">{{ t('nav.runs') }}</span>
                         </a>
                     </li>
                     <li class="nav-item">
                         <a class="nav-link {% if '/companies' in request.url.path %}active{% endif %}" href="{{ url_for('list_companies') }}">
-                            Companies
+                            <span data-i18n="nav.companies">{{ t('nav.companies') }}</span>
                         </a>
                     </li>
                     <li class="nav-item">
                         <a class="nav-link {% if '/jobs' in request.url.path %}active{% endif %}" href="{{ url_for('list_jobs') }}">
-                            Jobs
+                            <span data-i18n="nav.jobs">{{ t('nav.jobs') }}</span>
                         </a>
+                    </li>
+
+                    <!-- Language switcher -->
+                    <li class="nav-item dropdown locale-switcher">
+                        <a class="nav-link dropdown-toggle" href="#" id="langDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false" data-i18n-attr="aria-label:nav.language_menu" aria-label="{{ t('nav.language_menu') }}">
+                            <span data-i18n="nav.language_menu">{{ t('nav.language_menu') }}</span>
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="langDropdown">
+                            <li>
+                                <a class="dropdown-item" href="#" data-value="en">
+                                    <span data-i18n="nav.language_en">{{ t('nav.language_en') }}</span>
+                                    <span class="check">&check;</span>
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item" href="#" data-value="vi">
+                                    <span data-i18n="nav.language_vi">{{ t('nav.language_vi') }}</span>
+                                    <span class="check">&check;</span>
+                                </a>
+                            </li>
+                        </ul>
+                    </li>
+
+                    <!-- Theme switcher -->
+                    <li class="nav-item dropdown theme-switcher">
+                        <a class="nav-link dropdown-toggle" href="#" id="themeDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false" data-i18n-attr="aria-label:nav.theme_menu" aria-label="{{ t('nav.theme_menu') }}">
+                            <span data-i18n="nav.theme_menu">{{ t('nav.theme_menu') }}</span>
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="themeDropdown">
+                            <li>
+                                <a class="dropdown-item" href="#" data-value="light">
+                                    <span data-i18n="nav.theme_light">{{ t('nav.theme_light') }}</span>
+                                    <span class="check">&check;</span>
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item" href="#" data-value="dark">
+                                    <span data-i18n="nav.theme_dark">{{ t('nav.theme_dark') }}</span>
+                                    <span class="check">&check;</span>
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item" href="#" data-value="auto">
+                                    <span data-i18n="nav.theme_auto">{{ t('nav.theme_auto') }}</span>
+                                    <span class="check">&check;</span>
+                                </a>
+                            </li>
+                        </ul>
                     </li>
                 </ul>
             </div>
@@ -69,18 +144,22 @@
         <div class="container-fluid">
             <div class="row">
                 <div class="col-md-6 text-muted small">
-                    Job Board Scraper Dashboard v1.0.0
+                    <span data-i18n="app.footer_version">{{ t('app.footer_version') }}</span>
                 </div>
                 <div class="col-md-6 text-md-end text-muted small">
-                    Powered by FastAPI + Jinja2
+                    <span data-i18n="app.footer_powered">{{ t('app.footer_powered') }}</span>
                 </div>
             </div>
         </div>
     </footer>
 
     <!-- Bootstrap 5 JS Bundle -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
-    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
+
+    <!-- i18n + theme switcher. Loaded after the bundle so it can hook
+         into Bootstrap dropdown events. Defers until DOM ready. -->
+    <script src="{{ url_for('static', path='/js/i18n.js') }}"></script>
+
     {% block extra_scripts %}{% endblock %}
 </body>
 </html>

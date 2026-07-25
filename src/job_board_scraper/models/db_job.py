@@ -19,7 +19,7 @@ from sqlalchemy import (
     UniqueConstraint,
     func,
 )
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 if TYPE_CHECKING:
     from job_board_scraper.core.base import Base
@@ -48,6 +48,9 @@ class Job(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     company_id: Mapped[int] = mapped_column(
         Integer, ForeignKey("companies.id"), nullable=False
+    )
+    company: Mapped["Company"] = relationship(  # noqa: F821
+        "Company", back_populates="jobs", lazy="selectin"
     )
     title: Mapped[str] = mapped_column(String(500), nullable=False)
     location: Mapped[str] = mapped_column(String(255), default="Remote", nullable=False)

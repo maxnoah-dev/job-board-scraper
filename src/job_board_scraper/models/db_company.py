@@ -11,7 +11,7 @@ from datetime import datetime
 from typing import TYPE_CHECKING
 
 from sqlalchemy import JSON, Boolean, DateTime, Integer, String, func
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 if TYPE_CHECKING:
     from job_board_scraper.core.base import Base
@@ -56,6 +56,10 @@ class Company(Base):
         server_default=func.now(),
         onupdate=func.now(),
         nullable=False,
+    )
+
+    jobs: Mapped[list["Job"]] = relationship(  # noqa: F821
+        "Job", back_populates="company", lazy="selectin"
     )
 
     def __repr__(self) -> str:

@@ -1,0 +1,129 @@
+/* Dark theme overrides for the Job Board Scraper dashboard.
+ *
+ * Activated when the <html> element has ``data-bs-theme="dark"``.
+ * The light/auto switching happens in JS (i18n.js) which sets the
+ * attribute before paint, so no flash of light content occurs.
+ */
+
+[data-bs-theme="dark"] {
+    --bs-body-bg: #0f172a;
+    --bs-body-color: #e2e8f0;
+    --bs-border-color: #1f2937;
+
+    --jbs-color-bg: #0f172a;
+    --jbs-color-surface: #1e293b;
+    --jbs-color-surface-alt: #111827;
+    --jbs-color-border: #334155;
+    --jbs-color-text-muted: #94a3b8;
+    --jbs-color-text-strong: #e2e8f0;
+    --jbs-color-link: #60a5fa;
+    --jbs-color-link-hover: #93c5fd;
+    --jbs-color-skeleton-start: #1e293b;
+    --jbs-color-skeleton-mid: #334155;
+    --jbs-color-scrollbar-track: #1e293b;
+    --jbs-color-scrollbar-thumb: #475569;
+    --jbs-color-scrollbar-thumb-hover: #64748b;
+    --jbs-color-focus-ring: rgba(96, 165, 250, 0.25);
+    --jbs-color-table-header: #94a3b8;
+    --jbs-color-row-hover: rgba(96, 165, 250, 0.08);
+    --jbs-color-card-shadow: rgba(0, 0, 0, 0.4);
+}
+
+[data-bs-theme="dark"] body {
+    background-color: var(--jbs-color-bg);
+    color: var(--jbs-color-text-strong);
+}
+
+/* Cards and tables pick up surface color via the variables, but
+   Bootstrap's own component classes sometimes need explicit hints. */
+[data-bs-theme="dark"] .card {
+    background-color: var(--jbs-color-surface);
+    border-color: var(--jbs-color-border);
+    color: var(--jbs-color-text-strong);
+}
+
+[data-bs-theme="dark"] .table {
+    --bs-table-color: var(--jbs-color-text-strong);
+    --bs-table-bg: var(--jbs-color-surface);
+    --bs-table-border-color: var(--jbs-color-border);
+    --bs-table-striped-bg: rgba(255, 255, 255, 0.02);
+    --bs-table-striped-color: var(--jbs-color-text-strong);
+    --bs-table-hover-bg: var(--jbs-color-row-hover);
+    --bs-table-hover-color: var(--jbs-color-text-strong);
+}
+
+[data-bs-theme="dark"] .text-muted {
+    color: var(--jbs-color-text-muted) !important;
+}
+
+[data-bs-theme="dark"] .bg-light {
+    background-color: var(--jbs-color-surface) !important;
+}
+
+[data-bs-theme="dark"] .navbar {
+    background-color: #111827 !important;
+    border-bottom-color: var(--jbs-color-border);
+}
+
+[data-bs-theme="dark"] .dropdown-menu {
+    background-color: var(--jbs-color-surface);
+    border-color: var(--jbs-color-border);
+    color: var(--jbs-color-text-strong);
+}
+
+[data-bs-theme="dark"] .dropdown-item {
+    color: var(--jbs-color-text-strong);
+}
+
+[data-bs-theme="dark"] .dropdown-item:hover,
+[data-bs-theme="dark"] .dropdown-item:focus {
+    background-color: rgba(255, 255, 255, 0.05);
+    color: var(--jbs-color-text-strong);
+}
+
+[data-bs-theme="dark"] .dropdown-divider {
+    border-color: var(--jbs-color-border);
+}
+
+[data-bs-theme="dark"] .modal-content,
+[data-bs-theme="dark"] .list-group-item {
+    background-color: var(--jbs-color-surface);
+    color: var(--jbs-color-text-strong);
+    border-color: var(--jbs-color-border);
+}
+
+[data-bs-theme="dark"] .form-control,
+[data-bs-theme="dark"] .form-select {
+    background-color: var(--jbs-color-surface);
+    color: var(--jbs-color-text-strong);
+    border-color: var(--jbs-color-border);
+}
+
+[data-bs-theme="dark"] .form-control::placeholder {
+    color: var(--jbs-color-text-muted);
+}
+
+[data-bs-theme="dark"] .page-link {
+    background-color: var(--jbs-color-surface);
+    color: var(--jbs-color-link);
+    border-color: var(--jbs-color-border);
+}
+
+[data-bs-theme="dark"] .page-item.disabled .page-link {
+    color: var(--jbs-color-text-muted);
+}
+
+[data-bs-theme="dark"] .badge {
+    border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+[data-bs-theme="dark"] .alert {
+    border-color: var(--jbs-color-border);
+}
+
+[data-bs-theme="dark"] .border-top,
+[data-bs-theme="dark"] .border-bottom,
+[data-bs-theme="dark"] .border-start,
+[data-bs-theme="dark"] .border-end {
+    border-color: var(--jbs-color-border) !important;
+}

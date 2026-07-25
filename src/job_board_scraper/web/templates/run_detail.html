@@ -1,14 +1,14 @@
 {% extends "base.html" %}
 
-{% block title %}Run #{{ run.id }} - Job Board Scraper{% endblock %}
+{% block title %}{{ t('run_detail.title_prefix') }}{{ run.id }} - Job Board Scraper{% endblock %}
 
 {% block content %}
 <div class="row mb-4">
     <div class="col-12">
-        <nav aria-label="breadcrumb">
+        <nav data-i18n-attr="aria-label:common.breadcrumb" aria-label="{{ t('common.breadcrumb') }}">
             <ol class="breadcrumb">
-                <li class="breadcrumb-item"><a href="{{ url_for('list_runs') }}">Runs</a></li>
-                <li class="breadcrumb-item active">Run #{{ run.id }}</li>
+                <li class="breadcrumb-item"><a href="{{ url_for('list_runs') }}"><span data-i18n="nav.runs">{{ t('nav.runs') }}</span></a></li>
+                <li class="breadcrumb-item active">{{ t('run_detail.title_prefix') }}{{ run.id }}</li>
             </ol>
         </nav>
     </div>
@@ -20,7 +20,7 @@
         <div class="card border-0 shadow-sm">
             <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
                 <div>
-                    <h5 class="mb-0">Scrape Run #{{ run.id }}</h5>
+                    <h5 class="mb-0">{{ t('run_detail.heading') }} #{{ run.id }}</h5>
                     {% set status_class = {
                         'success': 'bg-success',
                         'partial': 'bg-warning text-dark',
@@ -29,19 +29,19 @@
                         'cancelled': 'bg-secondary',
                         'interrupted': 'bg-dark'
                     } %}
-                    <span class="badge {{ status_class.get(run.status, 'bg-secondary') }} mt-2">
-                        {{ run.status|title }}
+                    <span class="badge {{ status_class.get(run.status, 'bg-secondary') }} mt-2" data-i18n="status.{{ run.status }}">
+                        {{ t('status.' ~ run.status) }}
                     </span>
                 </div>
             </div>
             <div class="card-body">
                 <div class="row">
                     <div class="col-md-3">
-                        <p class="mb-1 text-muted small">Started</p>
+                        <p class="mb-1 text-muted small"><span data-i18n="run_detail.col_started">{{ t('run_detail.col_started') }}</span></p>
                         <p class="mb-0 fw-medium">{{ run.started_at.strftime('%Y-%m-%d %H:%M:%S') }}</p>
                     </div>
                     <div class="col-md-3">
-                        <p class="mb-1 text-muted small">Finished</p>
+                        <p class="mb-1 text-muted small"><span data-i18n="run_detail.col_finished">{{ t('run_detail.col_finished') }}</span></p>
                         <p class="mb-0 fw-medium">
                             {% if run.finished_at %}
                                 {{ run.finished_at.strftime('%Y-%m-%d %H:%M:%S') }}
@@ -51,7 +51,7 @@
                         </p>
                     </div>
                     <div class="col-md-3">
-                        <p class="mb-1 text-muted small">Duration</p>
+                        <p class="mb-1 text-muted small"><span data-i18n="run_detail.col_duration">{{ t('run_detail.col_duration') }}</span></p>
                         <p class="mb-0 fw-medium">
                             {% if run.duration_seconds %}
                                 {{ "%.1f"|format(run.duration_seconds) }}s
@@ -61,12 +61,12 @@
                         </p>
                     </div>
                     <div class="col-md-3">
-                        <p class="mb-1 text-muted small">Triggered By</p>
+                        <p class="mb-1 text-muted small"><span data-i18n="run_detail.col_triggered_by">{{ t('run_detail.col_triggered_by') }}</span></p>
                         <p class="mb-0 fw-medium">
                             {% if run.triggered_by %}
                                 {{ run.triggered_by }}
                             {% else %}
-                                Manual
+                                <span data-i18n="run_detail.triggered_manual">{{ t('run_detail.triggered_manual') }}</span>
                             {% endif %}
                         </p>
                     </div>
@@ -86,7 +86,7 @@
         <div class="card border-0 shadow-sm">
             <div class="card-body text-center">
                 <h3 class="mb-0 text-primary">{{ run.total_jobs_found }}</h3>
-                <p class="text-muted mb-0 small">Jobs Found</p>
+                <p class="text-muted mb-0 small"><span data-i18n="run_detail.col_jobs_found">{{ t('run_detail.col_jobs_found') }}</span></p>
             </div>
         </div>
     </div>
@@ -94,7 +94,7 @@
         <div class="card border-0 shadow-sm">
             <div class="card-body text-center">
                 <h3 class="mb-0 text-success">{{ run.total_new_jobs }}</h3>
-                <p class="text-muted mb-0 small">New Jobs</p>
+                <p class="text-muted mb-0 small"><span data-i18n="run_detail.col_new_jobs">{{ t('run_detail.col_new_jobs') }}</span></p>
             </div>
         </div>
     </div>
@@ -102,7 +102,7 @@
         <div class="card border-0 shadow-sm">
             <div class="card-body text-center">
                 <h3 class="mb-0 text-warning">{{ run.total_closed_jobs }}</h3>
-                <p class="text-muted mb-0 small">Closed Jobs</p>
+                <p class="text-muted mb-0 small"><span data-i18n="run_detail.col_closed_jobs">{{ t('run_detail.col_closed_jobs') }}</span></p>
             </div>
         </div>
     </div>
@@ -110,7 +110,7 @@
         <div class="card border-0 shadow-sm">
             <div class="card-body text-center">
                 <h3 class="mb-0 text-danger">{{ run.total_failed }}</h3>
-                <p class="text-muted mb-0 small">Failed</p>
+                <p class="text-muted mb-0 small"><span data-i18n="run_detail.col_failed">{{ t('run_detail.col_failed') }}</span></p>
             </div>
         </div>
     </div>
@@ -121,21 +121,21 @@
     <div class="col-12">
         <div class="card border-0 shadow-sm">
             <div class="card-header bg-white py-3">
-                <h5 class="mb-0">Per-Company Attempts</h5>
+                <h5 class="mb-0"><span data-i18n="run_detail.section_attempts">{{ t('run_detail.section_attempts') }}</span></h5>
             </div>
             <div class="card-body p-0">
                 <div class="table-responsive">
                     <table class="table table-hover mb-0">
                         <thead class="table-light">
                             <tr>
-                                <th class="border-0">Company</th>
-                                <th class="border-0">Status</th>
-                                <th class="border-0">Jobs Found</th>
-                                <th class="border-0">New</th>
-                                <th class="border-0">Closed</th>
-                                <th class="border-0">Duration</th>
-                                <th class="border-0">Requests</th>
-                                <th class="border-0">Error</th>
+                                <th class="border-0"><span data-i18n="run_detail.col_company">{{ t('run_detail.col_company') }}</span></th>
+                                <th class="border-0"><span data-i18n="run_detail.col_status">{{ t('run_detail.col_status') }}</span></th>
+                                <th class="border-0"><span data-i18n="run_detail.col_jobs">{{ t('run_detail.col_jobs') }}</span></th>
+                                <th class="border-0"><span data-i18n="run_detail.col_new">{{ t('run_detail.col_new') }}</span></th>
+                                <th class="border-0"><span data-i18n="run_detail.col_closed">{{ t('run_detail.col_closed') }}</span></th>
+                                <th class="border-0"><span data-i18n="run_detail.col_duration_short">{{ t('run_detail.col_duration_short') }}</span></th>
+                                <th class="border-0"><span data-i18n="run_detail.col_requests">{{ t('run_detail.col_requests') }}</span></th>
+                                <th class="border-0"><span data-i18n="run_detail.col_error">{{ t('run_detail.col_error') }}</span></th>
                             </tr>
                         </thead>
                         <tbody>
@@ -155,8 +155,8 @@
                                             'running': 'bg-info',
                                             'skipped': 'bg-secondary'
                                         } %}
-                                        <span class="badge {{ status_class.get(attempt.status, 'bg-secondary') }}">
-                                            {{ attempt.status|title }}
+                                        <span class="badge {{ status_class.get(attempt.status, 'bg-secondary') }}" data-i18n="status.{{ attempt.status }}">
+                                            {{ t('status.' ~ attempt.status) }}
                                         </span>
                                     </td>
                                     <td class="align-middle">{{ attempt.jobs_found }}</td>
@@ -173,7 +173,7 @@
                                     <td class="align-middle">
                                         {% if attempt.error_message %}
                                             <span class="text-danger small" title="{{ attempt.error_message }}">
-                                                {{ attempt.error_type or 'Error' }}
+                                                {{ attempt.error_type or t('run_detail.col_error') }}
                                             </span>
                                         {% else %}
                                             -
@@ -183,7 +183,7 @@
                                 {% endfor %}
                             {% else %}
                                 <tr>
-                                    <td colspan="8" class="text-center text-muted py-4">No attempts recorded.</td>
+                                    <td colspan="8" class="text-center text-muted py-4"><span data-i18n="run_detail.no_attempts">{{ t('run_detail.no_attempts') }}</span></td>
                                 </tr>
                             {% endif %}
                         </tbody>

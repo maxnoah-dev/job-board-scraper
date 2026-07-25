@@ -1,12 +1,12 @@
 {% extends "base.html" %}
 
-{% block title %}Scrape Runs - Job Board Scraper{% endblock %}
+{% block title %}{{ t('nav.runs') }} - Job Board Scraper{% endblock %}
 
 {% block content %}
 <div class="row mb-4">
     <div class="col-12">
-        <h1 class="h3 mb-0 text-gray-800">Scrape Runs</h1>
-        <p class="text-muted">History of all scraping operations</p>
+        <h1 class="h3 mb-0 text-gray-800"><span data-i18n="nav.runs">{{ t('nav.runs') }}</span></h1>
+        <p class="text-muted"><span data-i18n="runs.title">{{ t('runs.title') }}</span></p>
     </div>
 </div>
 
@@ -16,17 +16,17 @@
             <table class="table table-hover mb-0">
                 <thead class="table-light">
                     <tr>
-                        <th class="border-0">ID</th>
-                        <th class="border-0">Started</th>
-                        <th class="border-0">Finished</th>
-                        <th class="border-0">Duration</th>
-                        <th class="border-0">Jobs Found</th>
-                        <th class="border-0">New Jobs</th>
-                        <th class="border-0">Closed</th>
-                        <th class="border-0">Success Rate</th>
-                        <th class="border-0">Status</th>
-                        <th class="border-0">Triggered By</th>
-                        <th class="border-0">Actions</th>
+                        <th class="border-0"><span data-i18n="runs.col_id">{{ t('runs.col_id') }}</span></th>
+                        <th class="border-0"><span data-i18n="runs.col_started">{{ t('runs.col_started') }}</span></th>
+                        <th class="border-0"><span data-i18n="runs.col_finished">{{ t('runs.col_finished') }}</span></th>
+                        <th class="border-0"><span data-i18n="runs.col_duration">{{ t('runs.col_duration') }}</span></th>
+                        <th class="border-0"><span data-i18n="runs.col_jobs_found">{{ t('runs.col_jobs_found') }}</span></th>
+                        <th class="border-0"><span data-i18n="runs.col_new_jobs">{{ t('runs.col_new_jobs') }}</span></th>
+                        <th class="border-0"><span data-i18n="runs.col_closed">{{ t('runs.col_closed') }}</span></th>
+                        <th class="border-0"><span data-i18n="runs.col_success_rate">{{ t('runs.col_success_rate') }}</span></th>
+                        <th class="border-0"><span data-i18n="runs.col_status">{{ t('runs.col_status') }}</span></th>
+                        <th class="border-0"><span data-i18n="runs.col_triggered_by">{{ t('runs.col_triggered_by') }}</span></th>
+                        <th class="border-0"><span data-i18n="runs.col_actions">{{ t('runs.col_actions') }}</span></th>
                     </tr>
                 </thead>
                 <tbody>
@@ -68,8 +68,8 @@
                                     'cancelled': 'bg-secondary',
                                     'interrupted': 'bg-dark'
                                 } %}
-                                <span class="badge {{ status_class.get(run.status, 'bg-secondary') }}">
-                                    {{ run.status|title }}
+                                <span class="badge {{ status_class.get(run.status, 'bg-secondary') }}" data-i18n="status.{{ run.status }}">
+                                    {{ t('status.' ~ run.status) }}
                                 </span>
                             </td>
                             <td class="align-middle">
@@ -81,14 +81,14 @@
                             </td>
                             <td class="align-middle">
                                 <a href="{{ url_for('run_detail', run_id=run.id) }}" class="btn btn-outline-primary btn-sm">
-                                    Details
+                                    <span data-i18n="common.details">{{ t('common.details') }}</span>
                                 </a>
                             </td>
                         </tr>
                         {% endfor %}
                     {% else %}
                         <tr>
-                            <td colspan="11" class="text-center text-muted py-4">No scrape runs yet.</td>
+                            <td colspan="11" class="text-center text-muted py-4"><span data-i18n="runs.no_runs">{{ t('runs.no_runs') }}</span></td>
                         </tr>
                     {% endif %}
                 </tbody>
@@ -99,15 +99,15 @@
 
 <!-- Pagination -->
 {% if total_pages > 1 %}
-<nav class="mt-4" aria-label="Pagination">
+<nav class="mt-4" data-i18n-attr="aria-label:common.pagination" aria-label="{{ t('common.pagination') }}">
     <ul class="pagination justify-content-center">
         {% if page > 1 %}
         <li class="page-item">
-            <a class="page-link" href="{{ url_for('list_runs', page=page-1) }}">Previous</a>
+            <a class="page-link" href="{{ url_for('list_runs', page=page-1) }}"><span data-i18n="common.previous">{{ t('common.previous') }}</span></a>
         </li>
         {% else %}
         <li class="page-item disabled">
-            <span class="page-link">Previous</span>
+            <span class="page-link"><span data-i18n="common.previous">{{ t('common.previous') }}</span></span>
         </li>
         {% endif %}
 
@@ -129,11 +129,11 @@
 
         {% if page < total_pages %}
         <li class="page-item">
-            <a class="page-link" href="{{ url_for('list_runs', page=page+1) }}">Next</a>
+            <a class="page-link" href="{{ url_for('list_runs', page=page+1) }}"><span data-i18n="common.next">{{ t('common.next') }}</span></a>
         </li>
         {% else %}
         <li class="page-item disabled">
-            <span class="page-link">Next</span>
+            <span class="page-link"><span data-i18n="common.next">{{ t('common.next') }}</span></span>
         </li>
         {% endif %}
     </ul>
