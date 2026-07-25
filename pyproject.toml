@@ -126,7 +126,6 @@ markers = [
     "slow: tests that take more than 1s; excluded from default runs.",
 ]
 asyncio_mode = "auto"
-asyncio_default_fixture_loop_scope = "function"
 
 [tool.coverage.run]
 branch = true

@@ -108,8 +108,14 @@
 <div class="row mb-4">
     <div class="col-12">
         <div class="card border-0 shadow-sm">
-            <div class="card-header bg-white py-3">
+            <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
                 <h5 class="mb-0"><span data-i18n="dashboard.card_last_run">{{ t('dashboard.card_last_run') }}</span></h5>
+                <button type="button" class="btn btn-primary btn-sm" data-scrape-trigger data-scrape-scope="all">
+                    <svg class="me-1" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+                        <polygon points="5 3 19 12 5 21 5 3"></polygon>
+                    </svg>
+                    <span data-i18n="scrape.run_all">{{ t('scrape.run_all') }}</span>
+                </button>
             </div>
             <div class="card-body">
                 {% if last_run %}

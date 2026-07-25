@@ -150,5 +150,18 @@
     "col_duration": "Duration",
     "col_error": "Error",
     "no_attempts": "No scrape attempts recorded."
+  },
+  "scrape": {
+    "run_all": "Run scrape now",
+    "run_company": "Scrape this company",
+    "running": "Scrape in progress...",
+    "starting": "Starting...",
+    "success": "Scrape finished.",
+    "failed": "Scrape failed.",
+    "conflict_title": "Already running",
+    "conflict_message": "A scrape is already in progress. Please wait for it to finish.",
+    "error_title": "Could not start scrape",
+    "idle": "Idle",
+    "polling_label": "Polling status"
   }
 }

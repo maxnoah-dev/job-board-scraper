@@ -5,7 +5,8 @@ from __future__ import annotations
 from datetime import date
 from typing import Any
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, HTTPException, Query
+from pydantic import BaseModel, Field
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -19,8 +20,67 @@ from job_board_scraper.models import (
     ScrapeRun,
 )
 from job_board_scraper.models.job import JobStatus
+from job_board_scraper.web.services import ScrapeTriggerError, get_trigger
 
 router = APIRouter()
+
+
+class StartRunRequest(BaseModel):
+    """Body for POST /api/runs.
+
+    Both fields are optional. ``company_slug`` scopes the run to a
+    single company; ``dry_run`` runs the extract phase without DB writes.
+    """
+
+    company_slug: str | None = Field(default=None, max_length=120)
+    dry_run: bool = False
+
+
+class StartRunResponse(BaseModel):
+    run_id: int
+    triggered_by: str
+    company_slug: str | None = None
+    state: str
+
+
+@router.post(
+    "/runs",
+    response_model=StartRunResponse,
+    status_code=202,
+    name="api_start_run",
+)
+async def start_run(payload: StartRunRequest) -> StartRunResponse:
+    """Kick off a scrape run in the background.
+
+    Returns 202 immediately with the new ``run_id``. The caller can poll
+    ``GET /api/runs/status`` to follow progress. If a run is already in
+    flight, returns 409 with a short message instead of queuing.
+    """
+    trigger = get_trigger()
+    try:
+        snapshot = await trigger.start(
+            company_slug=payload.company_slug,
+            triggered_by="ui",
+            dry_run=payload.dry_run,
+        )
+    except ScrapeTriggerError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+
+    assert snapshot.run_id is not None  # populated by start()
+    return StartRunResponse(
+        run_id=snapshot.run_id,
+        triggered_by=snapshot.triggered_by or "ui",
+        company_slug=snapshot.company_slug,
+        state=snapshot.state,
+    )
+
+
+@router.get("/runs/status", name="api_run_status")
+async def run_status() -> dict[str, Any]:
+    """Return the trigger's current state for client polling."""
+    trigger = get_trigger()
+    snapshot = await trigger.status()
+    return snapshot.to_dict()
 
 
 @router.get("/stats")

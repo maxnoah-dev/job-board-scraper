@@ -102,6 +102,10 @@ EXPECTED_PACKAGES: list[str] = [
     "job_board_scraper.web.routes.dashboard",
     "job_board_scraper.web.routes.jobs",
     "job_board_scraper.web.routes.runs",
+    "job_board_scraper.web.i18n",
+    "job_board_scraper.web.i18n.translations",
+    "job_board_scraper.web.services",
+    "job_board_scraper.web.services.scrape_trigger",
 ]
 
 # Directed edges that represent allowed imports between modules.

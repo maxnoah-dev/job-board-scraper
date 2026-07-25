@@ -24,6 +24,7 @@ from job_board_scraper.web.routes import (
     jobs_router,
     runs_router,
 )
+from job_board_scraper.web.services import get_trigger
 
 # Package root directory
 PACKAGE_ROOT = Path(__file__).parent
@@ -38,8 +39,10 @@ STATIC_DIR = PACKAGE_ROOT / "static"
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """Manage application lifespan: startup and shutdown events."""
-    # Startup: initialize database
+    # Startup: initialize database + the scrape trigger singleton so
+    # the API endpoints always see the same instance.
     await init_db()
+    app.state.scrape_trigger = get_trigger()
     yield
     # Shutdown: close database connections
     await close_db()

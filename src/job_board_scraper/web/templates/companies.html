@@ -69,9 +69,16 @@
                                 {% endif %}
                             </td>
                             <td class="align-middle">
-                                <a href="{{ url_for('company_detail', slug=company.slug) }}" class="btn btn-outline-primary btn-sm">
-                                    <span data-i18n="common.view">{{ t('common.view') }}</span>
-                                </a>
+                                <div class="btn-group btn-group-sm" role="group">
+                                    <a href="{{ url_for('company_detail', slug=company.slug) }}" class="btn btn-outline-primary">
+                                        <span data-i18n="common.view">{{ t('common.view') }}</span>
+                                    </a>
+                                    <button type="button" class="btn btn-outline-success" data-scrape-trigger data-scrape-scope="company" data-company-slug="{{ company.slug }}" data-i18n-attr="title:scrape.run_company" title="{{ t('scrape.run_company') }}">
+                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+                                            <polygon points="5 3 19 12 5 21 5 3"></polygon>
+                                        </svg>
+                                    </button>
+                                </div>
                             </td>
                         </tr>
                         {% endfor %}

@@ -256,3 +256,35 @@ footer {
 .theme-switcher .dropdown-item.active .check {
     opacity: 1;
 }
+
+/* Bootstrap pins ``.navbar-nav .dropdown-menu { position: static }`` so the
+ * menu flows inline when the navbar is collapsed. On tablet/desktop (sm+)
+ * we want it to float over content like a real dropdown, so re-apply
+ * ``absolute``. Selector must beat Bootstrap's, hence ``!important``. */
+@media (min-width: 576px) {
+    .navbar-nav .dropdown-menu {
+        position: absolute !important;
+        float: none;
+    }
+
+    .navbar-nav .locale-switcher .dropdown-menu,
+    .navbar-nav .theme-switcher .dropdown-menu {
+        margin-top: 0.5rem;
+    }
+}
+
+/* Reinforce at md/lg so it survives Bootstrap's own breakpoint rules. */
+@media (min-width: 768px) {
+    .navbar-nav .dropdown-menu {
+        position: absolute !important;
+        float: none;
+    }
+}
+
+/* ``.collapse`` (Bootstrap collapse component) sets ``visibility: hidden``
+ * unless ``.show`` is present. When the navbar is ``.navbar-expand``
+ * (always expanded) we want the contents visible regardless of the
+ * ``.show`` toggle. Override visibility at every breakpoint. */
+.navbar-expand .navbar-collapse {
+    visibility: visible !important;
+}

@@ -150,5 +150,18 @@
     "col_duration": "Thời lượng",
     "col_error": "Lỗi",
     "no_attempts": "Chưa ghi nhận lượt thu thập nào."
+  },
+  "scrape": {
+    "run_all": "Chạy cào dữ liệu",
+    "run_company": "Cào công ty này",
+    "running": "Đang cào dữ liệu...",
+    "starting": "Đang khởi động...",
+    "success": "Hoàn tất cào dữ liệu.",
+    "failed": "Cào dữ liệu thất bại.",
+    "conflict_title": "Đang có lượt chạy khác",
+    "conflict_message": "Một lượt cào đang chạy. Vui lòng đợi nó kết thúc.",
+    "error_title": "Không thể bắt đầu cào dữ liệu",
+    "idle": "Đang rảnh",
+    "polling_label": "Đang kiểm tra trạng thái"
   }
 }
