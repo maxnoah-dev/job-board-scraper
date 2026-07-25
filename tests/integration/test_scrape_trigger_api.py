@@ -32,7 +32,6 @@ from sqlalchemy.pool import StaticPool
 from job_board_scraper.core.base import Base
 from job_board_scraper.core.database import get_session_factory
 
-
 TEST_DB_URL = "sqlite+aiosqlite:///:memory:"
 
 
@@ -125,7 +124,7 @@ async def test_start_all_companies_returns_run_id(
 
         app = create_app()
         transport = ASGITransport(app=app)
-        async with AsyncClient(transport=transport, base_url="http://test") as client:
+        async with AsyncClient(transport=transport, base_url="http://test") as client:  # noqa: SIM117
             async with app.router.lifespan_context(app):
                 resp = await client.post("/api/runs", json={})
                 await asyncio.wait_for(entered.wait(), timeout=2)
@@ -156,7 +155,7 @@ async def test_start_specific_company(setup_db, seed_company, reset_trigger):
 
         app = create_app()
         transport = ASGITransport(app=app)
-        async with AsyncClient(transport=transport, base_url="http://test") as client:
+        async with AsyncClient(transport=transport, base_url="http://test") as client:  # noqa: SIM117
             async with app.router.lifespan_context(app):
                 resp = await client.post(
                     "/api/runs", json={"company_slug": "triggerco"}
@@ -199,7 +198,7 @@ async def test_second_start_returns_409_when_running(
 
         app = create_app()
         transport = ASGITransport(app=app)
-        async with AsyncClient(transport=transport, base_url="http://test") as client:
+        async with AsyncClient(transport=transport, base_url="http://test") as client:  # noqa: SIM117
             async with app.router.lifespan_context(app):
                 first = await client.post("/api/runs", json={})
                 assert first.status_code == 202
@@ -222,7 +221,7 @@ async def test_status_idle_when_nothing_running(setup_db, reset_trigger):
 
     app = create_app()
     transport = ASGITransport(app=app)
-    async with AsyncClient(transport=transport, base_url="http://test") as client:
+    async with AsyncClient(transport=transport, base_url="http://test") as client:  # noqa: SIM117
         async with app.router.lifespan_context(app):
             resp = await client.get("/api/runs/status")
 
@@ -253,7 +252,7 @@ async def test_status_running_during_run(setup_db, seed_company, reset_trigger):
 
         app = create_app()
         transport = ASGITransport(app=app)
-        async with AsyncClient(transport=transport, base_url="http://test") as client:
+        async with AsyncClient(transport=transport, base_url="http://test") as client:  # noqa: SIM117
             async with app.router.lifespan_context(app):
                 await client.post("/api/runs", json={})
 

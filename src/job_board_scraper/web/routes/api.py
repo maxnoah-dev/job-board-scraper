@@ -66,7 +66,7 @@ async def start_run(payload: StartRunRequest) -> StartRunResponse:
     except ScrapeTriggerError as exc:
         raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
 
-    assert snapshot.run_id is not None  # populated by start()
+    assert snapshot.run_id is not None  # populated by start()  # noqa: S101
     return StartRunResponse(
         run_id=snapshot.run_id,
         triggered_by=snapshot.triggered_by or "ui",

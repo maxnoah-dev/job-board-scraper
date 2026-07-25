@@ -24,13 +24,13 @@ from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from typing import Any
 
-from job_board_scraper.etl.pipeline import (
+from job_board_scraper.core.database import session_scope
+from job_board_scraper.etl.pipeline import (  # noqa: F401  # patch target
     PipelineExitCode,
     ScrapingPipeline,
     create_pipeline,
 )
 from job_board_scraper.models import RunStatus, ScrapeRun
-from job_board_scraper.core.database import session_scope
 
 logger = logging.getLogger(__name__)
 
