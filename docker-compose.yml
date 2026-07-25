@@ -1,15 +1,37 @@
-﻿# docker-compose.yml â€” local development & CI smoke stack.
+﻿# Local development stack: PostgreSQL, one-time bootstrap, and web dashboard.
+x-app-environment: &app-environment
+  DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-jobs}:${POSTGRES_PASSWORD:-jobs}@postgres:5432/${POSTGRES_DB:-jobs}
+  LOG_LEVEL: ${LOG_LEVEL:-INFO}
+  LOG_FILE: /app/logs/scraper.log
+  EXPORT_DIR: /app/data
+  SCHEDULER_ENABLED: "false"
+  PLAYWRIGHT_BROWSERS_INSTALLED: ${PLAYWRIGHT_BROWSERS_INSTALLED:-false}
+  ALERT_EMAIL_ENABLED: ${ALERT_EMAIL_ENABLED:-false}
+  ALERT_SLACK_WEBHOOK: ${ALERT_SLACK_WEBHOOK:-}
+
+x-app-service: &app-service
+  build:
+    context: .
+    dockerfile: Dockerfile
+    target: ${SCRAPER_TARGET:-runtime}
+  image: job-board-scraper:${SCRAPER_TAG:-local}
+  environment: *app-environment
+  volumes:
+    - scraper-data:/app/data
+    - scraper-logs:/app/logs
+  networks:
+    - jbs-net
+
 services:
   postgres:
     image: postgres:16-alpine
-    container_name: jbs-postgres
     restart: unless-stopped
     environment:
-      POSTGRES_USER: 
-      POSTGRES_PASSWORD: 
-      POSTGRES_DB: 
+      POSTGRES_USER: ${POSTGRES_USER:-jobs}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-jobs}
+      POSTGRES_DB: ${POSTGRES_DB:-jobs}
     ports:
-      - ":5432"
+      - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-jobs} -d ${POSTGRES_DB:-jobs}"]
       interval: 5s
@@ -20,30 +42,47 @@ services:
     networks:
       - jbs-net
 
-  scraper:
-    build:
-      context: .
-      dockerfile: Dockerfile
-      target: ${SCRAPER_TARGET:-runtime}
-    image: job-board-scraper:${SCRAPER_TAG:-local}
-    container_name: jbs-scraper
+  bootstrap:
+    <<: *app-service
     depends_on:
       postgres:
         condition: service_healthy
-    environment:
-      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-jobs}:${POSTGRES_PASSWORD:-jobs}@postgres:5432/${POSTGRES_DB:-jobs}
-      LOG_LEVEL: ${LOG_LEVEL:-INFO}
-      LOG_FILE: /app/logs/scraper.log
-      EXPORT_DIR: /app/data
-      SCHEDULER_ENABLED: "false"
-      PLAYWRIGHT_BROWSERS_INSTALLED: ${PLAYWRIGHT_BROWSERS_INSTALLED:-false}
-      ALERT_EMAIL_ENABLED: ${ALERT_EMAIL_ENABLED:-false}
-      ALERT_SLACK_WEBHOOK: ${ALERT_SLACK_WEBHOOK:-}
-    volumes:
-      - scraper-data:/app/data
-      - scraper-logs:/app/logs
-    networks:
-      - jbs-net
+    command:
+      - /bin/sh
+      - -ec
+      - |
+        python -m job_board_scraper.cli init-db
+        python -m job_board_scraper.cli seed
+    restart: "no"
+
+  web:
+    <<: *app-service
+    depends_on:
+      bootstrap:
+        condition: service_completed_successfully
+    command:
+      - uvicorn
+      - job_board_scraper.web.app:app
+      - --host
+      - 0.0.0.0
+      - --port
+      - "8000"
+    ports:
+      - "127.0.0.1:${WEB_PORT:-8000}:8000"
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "--silent", "http://localhost:8000/"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  scraper:
+    <<: *app-service
+    profiles: ["tools"]
+    depends_on:
+      bootstrap:
+        condition: service_completed_successfully
+    command: ["python", "-m", "job_board_scraper.cli", "run"]
 
 volumes:
   postgres-data:

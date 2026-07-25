@@ -509,5 +509,20 @@ class ScrapingPipeline:
 
 
 def create_pipeline() -> ScrapingPipeline:
-    """Factory function to create a scraping pipeline."""
+    """Create a pipeline with all built-in adapters registered."""
+    from job_board_scraper.adapters.implementations.opswat_adapter import OpswatAdapter
+    from job_board_scraper.adapters.implementations.techcorp_adapter import (
+        TechCorpAdapter,
+    )
+    from job_board_scraper.adapters.implementations.vancity_adapter import (
+        VancityAdapter,
+    )
+    from job_board_scraper.adapters.registry import registry
+
+    adapter_types = (OpswatAdapter, VancityAdapter, TechCorpAdapter)
+    for adapter_type in adapter_types:
+        adapter = adapter_type()
+        if registry.get_or_none(adapter.slug) is None:
+            registry.register(adapter)
+
     return ScrapingPipeline()

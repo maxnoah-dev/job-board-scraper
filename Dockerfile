@@ -14,7 +14,7 @@
 # The base Python version is pinned to the lowest supported (3.11) so the
 # build matrix in CI matches the lockfile's `python = ">=3.11,<3.13"`.
 ARG PYTHON_VERSION=3.11
-ARG POETRY_VERSION=1.8.5
+ARG POETRY_VERSION=2.4.1
 
 # ---------------------------------------------------------------------------
 # Stage 1: builder — install dependencies into a virtual env we can copy
@@ -42,16 +42,13 @@ RUN apt-get update \
 
 RUN pip install --no-cache-dir "poetry==${POETRY_VERSION}"
 
-WORKDIR /build
+WORKDIR /app
 
-# Copy dependency manifests first so this layer is cached when only source
-# code changes.
-COPY pyproject.toml poetry.lock* ./
-COPY README.md ./
-
-# Install runtime + dev dependencies into the project venv. `--no-root`
-# leaves the source out of the install; we copy it in below.
-RUN poetry install --no-interaction --no-root --with dev
+# Copy the project before installation so Poetry installs both dependencies and
+# the application package into the portable virtual environment.
+COPY pyproject.toml poetry.lock* README.md ./
+COPY src ./src
+RUN poetry install --no-interaction --only main
 
 # ---------------------------------------------------------------------------
 # Stage 2: runtime — slim image with the prebuilt venv only

@@ -200,7 +200,7 @@ async def async_main(verbose: bool, force: bool = False) -> int:
         await close_db()
 
 
-def main() -> int:
+def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         prog="seed-companies",
         description="Seed company records from the source manifest (idempotent).",
@@ -211,7 +211,7 @@ def main() -> int:
         action="store_true",
         help="Force re-activation of currently inactive companies",
     )
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
     return asyncio.run(async_main(args.verbose, args.force))
 
 

@@ -10,7 +10,7 @@ from fastapi.responses import HTMLResponse
 from sqlalchemy import func, select
 from sqlalchemy.orm import selectinload
 
-from job_board_scraper.core.database import get_session
+from job_board_scraper.core.database import session_scope
 from job_board_scraper.models import Company, Job
 from job_board_scraper.models.job import JobStatus
 from job_board_scraper.web.routes.companies import _job_to_dict
@@ -32,7 +32,7 @@ async def list_jobs(
     """Render the list of jobs with filters."""
     templates = request.app.state.templates
 
-    async with get_session() as session:
+    async with session_scope() as session:
         # Get all companies for filter dropdown
         companies_result = await session.execute(select(Company).order_by(Company.name))
         companies = list(companies_result.scalars().all())

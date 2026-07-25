@@ -1,8 +1,8 @@
 """Idempotent database initialization script.
 
-Creates all tables and runs pending Alembic migrations so the schema
-matches what the application expects. Safe to re-run â€” repeated calls
-are no-ops after the first successful run.
+Creates all tables via SQLAlchemy ``Base.metadata.create_all`` so the schema
+matches what the application expects. Safe to re-run — repeated calls are
+no-ops after the first successful run.
 
 Exit codes:
     0 - SUCCESS (tables created / already up-to-date)
@@ -76,13 +76,13 @@ async def async_main(verbose: bool) -> int:
         await close_db()
 
 
-def main() -> int:
+def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         prog="init-db",
         description="Initialize the job-board-scraper database (idempotent).",
     )
     parser.add_argument("-v", "--verbose", action="store_true", help="Verbose output")
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
     return asyncio.run(async_main(args.verbose))
 
 

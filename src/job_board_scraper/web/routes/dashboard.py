@@ -7,7 +7,7 @@ from fastapi.responses import HTMLResponse
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from job_board_scraper.core.database import get_session
+from job_board_scraper.core.database import session_scope
 from job_board_scraper.models import Company, Job, ScrapeRun
 from job_board_scraper.models.job import JobStatus
 
@@ -20,7 +20,7 @@ async def dashboard(request: Request) -> HTMLResponse:
     """Render the main dashboard page."""
     templates = request.app.state.templates
 
-    async with get_session() as session:
+    async with session_scope() as session:
         # Get stats
         stats = await _get_stats(session)
 

@@ -85,14 +85,15 @@ def cmd_init_db(_args: argparse.Namespace) -> int:
     """Initialize the database schema."""
     import scripts.init_db
 
-    return scripts.init_db.main()
+    return scripts.init_db.main([])
 
 
-def cmd_seed(_args: argparse.Namespace) -> int:
+def cmd_seed(args: argparse.Namespace) -> int:
     """Seed company records from the source manifest."""
     import scripts.seed_companies
 
-    return scripts.seed_companies.main()
+    seed_args = ["--force"] if args.force else []
+    return scripts.seed_companies.main(seed_args)
 
 
 def cmd_export(args: argparse.Namespace) -> int:

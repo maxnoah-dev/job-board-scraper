@@ -7,7 +7,7 @@ from fastapi.responses import HTMLResponse
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from job_board_scraper.core.database import get_session
+from job_board_scraper.core.database import session_scope
 from job_board_scraper.models import AttemptStatus, Company, ScrapeAttempt, ScrapeRun
 
 router = APIRouter()
@@ -23,7 +23,7 @@ async def list_runs(
     """Render the list of scrape runs."""
     templates = request.app.state.templates
 
-    async with get_session() as session:
+    async with session_scope() as session:
         # Get total count
         total_count = await session.scalar(select(func.count(ScrapeRun.id)))
         total_pages = max(1, (total_count + ITEMS_PER_PAGE - 1) // ITEMS_PER_PAGE)
@@ -65,7 +65,7 @@ async def run_detail(
     """Render the detail page for a single scrape run."""
     templates = request.app.state.templates
 
-    async with get_session() as session:
+    async with session_scope() as session:
         # Get the run
         result = await session.execute(select(ScrapeRun).where(ScrapeRun.id == run_id))
         run = result.scalar_one_or_none()

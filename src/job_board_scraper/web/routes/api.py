@@ -10,7 +10,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from job_board_scraper.core.database import get_session
+from job_board_scraper.core.database import session_scope
 from job_board_scraper.models import (
     AttemptStatus,
     Company,
@@ -26,7 +26,7 @@ router = APIRouter()
 @router.get("/stats")
 async def get_stats() -> dict[str, Any]:
     """Get dashboard statistics as JSON."""
-    async with get_session() as session:
+    async with session_scope() as session:
         # Total jobs
         total_jobs = await session.scalar(select(func.count(Job.id))) or 0
 
@@ -95,7 +95,7 @@ async def get_runs(
     limit: int = Query(20, ge=1, le=100),
 ) -> dict[str, Any]:
     """Get scrape runs as JSON with pagination."""
-    async with get_session() as session:
+    async with session_scope() as session:
         # Get total count
         total_count = await session.scalar(select(func.count(ScrapeRun.id))) or 0
         total_pages = max(1, (total_count + limit - 1) // limit)
@@ -147,7 +147,7 @@ async def get_runs(
 @router.get("/runs/{run_id}")
 async def get_run_detail(run_id: int) -> dict[str, Any]:
     """Get details for a specific scrape run."""
-    async with get_session() as session:
+    async with session_scope() as session:
         # Get the run
         result = await session.execute(select(ScrapeRun).where(ScrapeRun.id == run_id))
         run = result.scalar_one_or_none()
@@ -219,7 +219,7 @@ async def get_jobs(
     limit: int = Query(25, ge=1, le=100),
 ) -> dict[str, Any]:
     """Get jobs as JSON with filters and pagination."""
-    async with get_session() as session:
+    async with session_scope() as session:
         # Build query
         query = select(Job).join(Company, Job.company_id == Company.id)
         count_query = select(func.count(Job.id)).join(
@@ -304,7 +304,7 @@ async def get_companies(
     limit: int = Query(20, ge=1, le=100),
 ) -> dict[str, Any]:
     """Get companies as JSON with pagination."""
-    async with get_session() as session:
+    async with session_scope() as session:
         # Get total count
         total_count = await session.scalar(select(func.count(Company.id))) or 0
         total_pages = max(1, (total_count + limit - 1) // limit)

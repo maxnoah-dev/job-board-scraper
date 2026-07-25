@@ -90,11 +90,63 @@ python -m venv .venv
 
 Nếu `.\.venv\Scripts\python.exe` đã có sẵn trong `PATH`, hãy bỏ phần tiền tố đó đi.
 
-## Docker (khuyến nghị cho môi trường production)
+## Docker (chạy local và build production)
+
+### Chạy ứng dụng local
+
+Yêu cầu duy nhất là Docker Desktop đang chạy. Stack gồm PostgreSQL, bước bootstrap một lần (`init-db` + `seed`) và web dashboard.
+
+```powershell
+# Build image và khởi động toàn bộ stack
+# Lần đầu có thể mất vài phút để tải image và cài dependencies.
+docker compose up --build -d
+
+# Kiểm tra trạng thái (postgres và web phải healthy; bootstrap thoát mã 0)
+docker compose ps --all
+
+# Xem log ứng dụng
+docker compose logs -f web
+```
+
+Mở dashboard tại [http://localhost:8000](http://localhost:8000). PostgreSQL được mở tại `localhost:5432` để có thể kiểm tra bằng công cụ desktop.
+
+Có thể đổi cổng hoặc thông tin PostgreSQL bằng file `.env`:
+
+```dotenv
+WEB_PORT=8080
+POSTGRES_PORT=5433
+POSTGRES_USER=jobs
+POSTGRES_PASSWORD=jobs
+POSTGRES_DB=jobs
+```
+
+Các lệnh vận hành thường dùng:
+
+```powershell
+# Chạy scraper một lần (service tools chỉ được tạo khi gọi trực tiếp)
+docker compose run --rm scraper python -m job_board_scraper.cli run
+
+# Chạy thử, không ghi dữ liệu
+docker compose run --rm scraper python -m job_board_scraper.cli run --dry-run
+
+# Chạy cho một công ty cụ thể
+docker compose run --rm scraper python -m job_board_scraper.cli run -c opswat
+
+# Xuất danh sách việc làm ra volume data
+docker compose run --rm scraper python -m job_board_scraper.cli export -o /app/data/jobs.csv
+
+# Dừng stack nhưng giữ dữ liệu PostgreSQL
+docker compose down
+
+# Xóa cả stack và dữ liệu local để khởi tạo lại từ đầu
+docker compose down -v
+```
+
+Bước `bootstrap` là idempotent nên `docker compose up` có thể chạy lại an toàn. Không cần chạy `init-db` hoặc `seed` thủ công.
+
+### Build image production
 
 Môi trường runtime production là **container chạy một lần** được điều khiển bởi bộ lập lịch ngoài (Kubernetes CronJob, Cloud Scheduler, v.v.) theo [ADR-0006](docs/adr/0006-scheduler-export.md).
-
-### Build image
 
 ```bash
 # Image tiêu chuẩn (không có tự động hóa trình duyệt)
@@ -104,32 +156,7 @@ docker build --target runtime -t job-board-scraper:latest .
 docker build --target runtime-browser -t job-board-scraper:browser .
 ```
 
-### Chạy với docker-compose (PostgreSQL cục bộ)
-
-```bash
-# Khởi động PostgreSQL và chạy scraper trỏ vào đó
-docker compose up --build postgres scraper
-
-# Chạy một lần cào thử (dry-run)
-docker compose run --rm scraper python -m job_board_scraper.cli run --dry-run
-
-# Chạy cho một công ty cụ thể
-docker compose run --rm scraper python -m job_board_scraper.cli run -c opswat
-
-# Khởi tạo cơ sở dữ liệu
-docker compose run --rm scraper python -m job_board_scraper.cli init-db
-
-# Gieo dữ liệu công ty
-docker compose run --rm scraper python -m job_board_scraper.cli seed
-
-# Xuất danh sách việc làm ra CSV
-docker compose run --rm scraper python -m job_board_scraper.cli export -o /app/data/jobs.csv
-
-# Truy cập shell của container
-docker compose run --rm --entrypoint bash scraper
-```
-
-### Chạy độc lập (PostgreSQL ngoài)
+### Chạy image độc lập (PostgreSQL ngoài)
 
 ```bash
 # Thiết lập biến môi trường
@@ -189,7 +216,7 @@ Cấu hình được điều khiển qua biến môi trường; không có bí m
 | Mục tiêu | Cách thực hiện | Ghi chú |
 | --- | --- | --- |
 | Cục bộ / phát triển | Python trực tiếp + SQLite | `python scripts/run_scrape.py` |
-| Cục bộ / giống production | docker compose + PostgreSQL | `docker compose up scraper` |
+| Cục bộ / giống production | docker compose + PostgreSQL | `docker compose up --build -d`, mở `http://localhost:8000` |
 | Cloud / production | Container một lần + bộ lập lịch ngoài | Xem ADR-0006 |
 | CI / kiểm thử | Ma trận GitHub Actions | Service PostgreSQL trong `.github/workflows/ci.yml` |
 

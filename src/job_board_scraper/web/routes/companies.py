@@ -7,7 +7,7 @@ from fastapi.responses import HTMLResponse
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from job_board_scraper.core.database import get_session
+from job_board_scraper.core.database import session_scope
 from job_board_scraper.models import Company, Job, ScrapeAttempt
 from job_board_scraper.models.job import JobStatus
 
@@ -24,7 +24,7 @@ async def list_companies(
     """Render the list of companies."""
     templates = request.app.state.templates
 
-    async with get_session() as session:
+    async with session_scope() as session:
         # Get total count
         total_count = await session.scalar(select(func.count(Company.id)))
         total_pages = max(1, (total_count + ITEMS_PER_PAGE - 1) // ITEMS_PER_PAGE)
@@ -63,7 +63,7 @@ async def company_detail(
     """Render the detail page for a company."""
     templates = request.app.state.templates
 
-    async with get_session() as session:
+    async with session_scope() as session:
         # Get the company
         result = await session.execute(select(Company).where(Company.slug == slug))
         company = result.scalar_one_or_none()
@@ -102,7 +102,7 @@ async def company_jobs(
     """Render jobs for a specific company."""
     templates = request.app.state.templates
 
-    async with get_session() as session:
+    async with session_scope() as session:
         # Get the company
         result = await session.execute(select(Company).where(Company.slug == slug))
         company = result.scalar_one_or_none()

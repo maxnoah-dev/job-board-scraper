@@ -121,3 +121,37 @@ class TestCliEntrypoint:
             job_board_scraper.cli.main()
         # argparse exits with 0 when printing help
         assert exc_info.value.code == 0
+
+    def test_cli_init_db_does_not_forward_subcommand(self, monkeypatch) -> None:
+        """The parent CLI must not leak its subcommand into the child parser."""
+        import job_board_scraper.cli
+        import scripts.init_db
+
+        received: list[list[str] | None] = []
+        monkeypatch.setattr(
+            scripts.init_db, "main", lambda argv=None: received.append(argv) or 0
+        )
+
+        result = job_board_scraper.cli.cmd_init_db(object())
+
+        assert result == 0
+        assert received == [[]]
+
+    def test_cli_seed_forwards_only_force_flag(self, monkeypatch) -> None:
+        """The seed child parser receives only flags owned by that command."""
+        from argparse import Namespace
+
+        import job_board_scraper.cli
+        import scripts.seed_companies
+
+        received: list[list[str] | None] = []
+        monkeypatch.setattr(
+            scripts.seed_companies,
+            "main",
+            lambda argv=None: received.append(argv) or 0,
+        )
+
+        result = job_board_scraper.cli.cmd_seed(Namespace(force=True))
+
+        assert result == 0
+        assert received == [["--force"]]
