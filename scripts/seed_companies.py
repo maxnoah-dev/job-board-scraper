@@ -31,9 +31,9 @@ from job_board_scraper.models.db_company import AdapterType, Company
 LOG_DIR = Path(__file__).resolve().parents[1] / "logs"
 LOG_FILE = LOG_DIR / "seed_companies.log"
 
-# Seed data derived from docs/sources/manifest.md.
+# Seed data derived from docs/sources/manifest.md (Phase 11).
 # Only sources that are "approved" or "needs-review" (fixture-only) are seeded.
-# Browser sources (blocked-by-policy) and owner-pending sources are skipped.
+# Specialized Exports remains "blocked-pending-owner" and is intentionally skipped.
 _SEED_COMPANIES: list[dict] = [
     {
         "name": "OPSWAT",
@@ -56,24 +56,62 @@ _SEED_COMPANIES: list[dict] = [
         "compliance_status": "needs-review",
     },
     {
-        "name": "TechCorp",
-        "slug": "techcorp",
-        "adapter_type": AdapterType.HTML.value,
-        "base_url": "https://example.com/careers",
-        "config": {
-            "selectors": {"job_list": ".job-listing", "title": "h2", "url": "a"}
-        },
+        "name": "Farm Credit Canada",
+        "slug": "farm-credit-canada",
+        "adapter_type": AdapterType.API.value,
+        "base_url": "https://fccfac.wd3.myworkdayjobs.com/en-US/careers-carrieres",
+        "config": {"workday_tenant": "fccfac"},
         "is_active": True,
         "authoritative": True,
         "compliance_status": "needs-review",
     },
     {
-        "name": "StartupXYZ",
-        "slug": "startup-xyz",
+        "name": "CalOptima",
+        "slug": "caloptima",
         "adapter_type": AdapterType.HTML.value,
-        "base_url": "https://startup.example.com/jobs",
+        "base_url": "https://careers.pageuppeople.com/1150/cw/en-us/listing",
         "config": {},
-        "is_active": False,
+        "is_active": True,
+        "authoritative": True,
+        "compliance_status": "needs-review",
+    },
+    {
+        "name": "iQmetrix",
+        "slug": "iqmetrix",
+        "adapter_type": AdapterType.HTML.value,
+        "base_url": "https://iqmetrix.applytojob.com/apply",
+        "config": {},
+        "is_active": True,
+        "authoritative": True,
+        "compliance_status": "needs-review",
+    },
+    {
+        "name": "First West Credit Union",
+        "slug": "first-west",
+        "adapter_type": AdapterType.HTML.value,
+        "base_url": "https://careers.firstwestcu.ca",
+        "config": {},
+        "is_active": True,
+        "authoritative": True,
+        "compliance_status": "needs-review",
+    },
+    {
+        "name": "Electric Power Engineers",
+        "slug": "electric-power-engineers",
+        "adapter_type": AdapterType.HTML.value,
+        "base_url": "https://join.epeconsulting.com/EPE-Engineering-Jobs/jobs",
+        "config": {},
+        "is_active": True,
+        "authoritative": True,
+        "compliance_status": "needs-review",
+    },
+    {
+        "name": "Absolute Security",
+        "slug": "absolute-security",
+        "adapter_type": AdapterType.HTML.value,
+        "base_url": "https://jobs.jobvite.com/absolute/jobs",
+        "config": {},
+        "is_active": True,
         "authoritative": True,
         "compliance_status": "needs-review",
     },
@@ -82,20 +120,21 @@ _SEED_COMPANIES: list[dict] = [
         "slug": "tiktok",
         "adapter_type": AdapterType.BROWSER.value,
         "base_url": "https://careers.tiktok.com",
-        "config": {},
-        "is_active": False,
+        "config": {"adr": "0008-chrome-anti-bot"},
+        # Active when ADR-0008 is in force; operators can disable via UI.
+        "is_active": True,
         "authoritative": True,
-        "compliance_status": "blocked-by-policy",
+        "compliance_status": "needs-review",
     },
     {
         "name": "Northrop Grumman",
         "slug": "northrop",
         "adapter_type": AdapterType.BROWSER.value,
         "base_url": "https://www.northropgrumman.com/careers",
-        "config": {},
-        "is_active": False,
+        "config": {"adr": "0008-chrome-anti-bot"},
+        "is_active": True,
         "authoritative": True,
-        "compliance_status": "blocked-by-policy",
+        "compliance_status": "needs-review",
     },
 ]
 

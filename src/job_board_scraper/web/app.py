@@ -25,6 +25,7 @@ from job_board_scraper.web.routes import (
     runs_router,
 )
 from job_board_scraper.web.services import get_trigger
+from job_board_scraper.web.templating import url_for_with_query
 
 # Package root directory
 PACKAGE_ROOT = Path(__file__).parent
@@ -81,6 +82,12 @@ def create_app() -> FastAPI:
     templates.env.globals["t"] = get_translator(DEFAULT_LOCALE)
     templates.env.globals["current_locale"] = DEFAULT_LOCALE
     templates.env.globals["supported_locales"] = SUPPORTED_LOCALES
+
+    # Replace Starlette's default ``url_for`` Jinja helper with one that
+    # accepts query parameters. Without this, calling
+    # ``url_for('list_runs', page=2)`` raises ``NoMatchFound`` because
+    # ``page`` is a query parameter on the route, not a path parameter.
+    templates.env.globals["url_for"] = url_for_with_query
 
     # Include routers
     app.include_router(dashboard_router, prefix="", tags=["Dashboard"])

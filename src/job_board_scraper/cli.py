@@ -5,6 +5,7 @@ Provides subcommands for the ETL pipeline:
     init-db     - Initialize the database schema
     seed        - Seed company records from the source manifest
     export      - Export jobs to CSV
+    export-xlsx - Export jobs to the Vietnamese-first Excel template
 
 Exit codes:
     0 - SUCCESS
@@ -43,6 +44,28 @@ def setup_logging(verbose: bool = False) -> None:
         logging.getLogger("httpcore").setLevel(logging.WARNING)
 
 
+def _run_coroutine(coro_factory):
+    """Run a coroutine factory, transparently handling pytest-asyncio loops.
+
+    ``coro_factory`` must be a zero-argument callable that returns a coroutine
+    when invoked. Under pytest-asyncio, an event loop is already running, so
+    ``asyncio.run`` would raise. We execute the coroutine on a worker thread
+    with its own event loop in that case.
+    """
+    coro = coro_factory()
+    try:
+        asyncio.get_running_loop()
+    except RuntimeError:
+        return asyncio.run(coro)
+    # Inside a running loop (pytest-asyncio). Run the coroutine on a worker
+    # thread so it has its own event loop and ``asyncio.run`` works.
+    import concurrent.futures as _cf
+
+    with _cf.ThreadPoolExecutor(max_workers=1) as ex:
+        future = ex.submit(asyncio.run, coro_factory())
+        return future.result()
+
+
 async def cmd_run(args: argparse.Namespace) -> int:
     """Execute the ETL scrape pipeline."""
     logger = logging.getLogger(__name__)
@@ -66,6 +89,7 @@ async def cmd_run(args: argparse.Namespace) -> int:
             company_slugs=company_slugs,
             dry_run=args.dry_run,
             triggered_by=triggered_by,
+            enable_vilao=getattr(args, "with_vilao", False),
         )
 
         _print_summary(result, args.verbose)
@@ -98,22 +122,93 @@ def cmd_seed(args: argparse.Namespace) -> int:
 
 def cmd_export(args: argparse.Namespace) -> int:
     """Export jobs to CSV."""
+    return _run_coroutine(lambda: _do_export_csv(args))
+
+
+async def _do_export_csv(args: argparse.Namespace) -> int:
     from job_board_scraper.core.database import check_connection, close_db
-    from job_board_scraper.reporting.csv_exporter import CSVExporter
+    from job_board_scraper.reporting.csv_exporter import CsvExporter
 
-    async def _do_export() -> int:
-        if not await check_connection():
-            print("ERROR: Cannot connect to database.")
-            return 1
-        try:
-            exporter = CSVExporter(args.output or "./data/jobs.csv")
-            count = await exporter.export(open_only=args.open_only)
-            print(f"Exported {count} jobs to {exporter.output_path}")
-            return 0
-        finally:
-            await close_db()
+    if not await check_connection():
+        print("ERROR: Cannot connect to database.")
+        return 1
+    try:
+        exporter = CsvExporter(args.output or "./data/jobs.csv")
+        count = await exporter.export(open_only=args.open_only)
+        print(f"Exported {count} jobs to {exporter.output_path}")
+        return 0
+    finally:
+        await close_db()
 
-    return asyncio.run(_do_export())
+
+def cmd_export_xlsx(args: argparse.Namespace) -> int:
+    """Export jobs to the Vietnamese-first Excel template."""
+    return _run_coroutine(lambda: _do_export_xlsx(args))
+
+
+async def _do_export_xlsx(args: argparse.Namespace) -> int:
+    from sqlalchemy import select
+
+    from job_board_scraper.core.config import get_settings
+    from job_board_scraper.core.database import (
+        check_connection,
+        close_db,
+        session_scope,
+    )
+    from job_board_scraper.models.db_company import Company
+    from job_board_scraper.models.db_job import Job
+    from job_board_scraper.reporting.excel_exporter import (
+        ExcelExporter,
+        ExcelExportOptions,
+    )
+
+    if not await check_connection():
+        print("ERROR: Cannot connect to database.")
+        return 1
+    try:
+        settings = get_settings()
+        output_path = Path(args.output or settings.EXPORT_DIR / "jobs.xlsx")
+        template_path = (
+            Path(args.template)
+            if args.template
+            else Path("docs/Apply Job in US.xlsx")
+        )
+
+        async with session_scope() as session:
+            stmt = select(Job, Company).join(
+                Company, Company.id == Job.company_id
+            )
+            if not args.include_closed:
+                stmt = stmt.where(Job.status == "open")
+            result = await session.execute(stmt)
+            rows = result.all()
+
+        jobs: list[dict] = []
+        for job, company in rows:
+            jobs.append(
+                {
+                    "company_name": company.name,
+                    "company_slug": company.slug,
+                    "title": job.title,
+                    "title_vi": job.title_vi,
+                    "url": job.url,
+                    "location": job.location,
+                    "status": job.status,
+                    "salary_raw": job.salary_raw,
+                    "raw_data": job.raw_data or {},
+                }
+            )
+
+        exporter = ExcelExporter(output_path=output_path, template_path=template_path)
+        options = ExcelExportOptions(
+            sheet_name=args.sheet_name,
+            include_closed=args.include_closed,
+        )
+        final_path = await exporter.export(jobs, options=options)
+        print(f"Exported {len(jobs)} jobs to {final_path}")
+        return 0
+    finally:
+        await close_db()
 
 
 def _print_summary(result, verbose: bool = False) -> None:
@@ -181,6 +276,11 @@ def main() -> int:
     p_run.add_argument(
         "-d", "--dry-run", action="store_true", help="Run without database writes"
     )
+    p_run.add_argument(
+        "--with-vilao",
+        action="store_true",
+        help="Enable Vilao LLM title translation (requires VILAO_API_KEY).",
+    )
     p_run.add_argument("-v", "--verbose", action="store_true", help="Verbose output")
 
     # init-db
@@ -204,6 +304,26 @@ def main() -> int:
     )
     p_exp.add_argument("-v", "--verbose", action="store_true", help="Verbose output")
 
+    # export-xlsx
+    p_xlsx = subparsers.add_parser(
+        "export-xlsx", help="Export jobs to the Vietnamese-first Excel template"
+    )
+    p_xlsx.add_argument(
+        "-o", "--output", type=str, help="Output XLSX path (default: data/jobs.xlsx)"
+    )
+    p_xlsx.add_argument(
+        "--template",
+        type=str,
+        help="Path to the Excel template (default: docs/Apply Job in US.xlsx).",
+    )
+    p_xlsx.add_argument(
+        "--sheet-name", type=str, default="From Scraper", help="Name of the new sheet"
+    )
+    p_xlsx.add_argument(
+        "--include-closed", action="store_true", help="Include closed jobs"
+    )
+    p_xlsx.add_argument("-v", "--verbose", action="store_true", help="Verbose output")
+
     args = parser.parse_args()
 
     if args.command == "run":
@@ -218,6 +338,9 @@ def main() -> int:
     elif args.command == "export":
         setup_logging(args.verbose)
         return cmd_export(args)
+    elif args.command == "export-xlsx":
+        setup_logging(args.verbose)
+        return cmd_export_xlsx(args)
     else:
         parser.print_help()
         return 1

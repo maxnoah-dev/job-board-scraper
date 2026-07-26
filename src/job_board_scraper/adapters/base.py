@@ -11,7 +11,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import TYPE_CHECKING, Protocol, runtime_checkable
+from typing import TYPE_CHECKING, Any, Protocol, runtime_checkable
 
 if TYPE_CHECKING:
     pass
@@ -38,7 +38,10 @@ class ExtractionResult:
     uniformly regardless of the underlying scraping method (API, HTML, Browser).
 
     Attributes:
-        jobs: List of raw job dictionaries emitted by the adapter.
+        jobs: Normalised adapter output. Modern adapters (e.g. OPSWAT)
+            emit ``RawJobData`` Pydantic models directly; legacy adapters
+            emit raw dicts which the extractor then validates. The extractor
+            handles both shapes.
         status: One of ``success``, ``partial``, ``failed`` (coerced to
             ``ExtractionStatus`` regardless of whether callers pass an enum
             member or a plain string).
@@ -48,7 +51,7 @@ class ExtractionResult:
         requests_made: Total number of HTTP requests attempted.
     """
 
-    jobs: list[dict] = field(default_factory=list)
+    jobs: list[Any] = field(default_factory=list)
     status: ExtractionStatus = ExtractionStatus.SUCCESS
     warnings: list[str] = field(default_factory=list)
     error: str | None = None

@@ -58,7 +58,7 @@ class Company(Base):
         nullable=False,
     )
 
-    jobs: Mapped[list["Job"]] = relationship(  # noqa: F821
+    jobs: Mapped[list[Job]] = relationship(  # noqa: F821
         "Job", back_populates="company", lazy="selectin"
     )
 

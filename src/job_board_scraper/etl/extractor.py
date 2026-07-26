@@ -6,7 +6,7 @@ Extracts job data from adapters and converts to normalized JobRecord format.
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from job_board_scraper.adapters.base import ExtractionStatus
 from job_board_scraper.etl.transformer import Transformer
@@ -14,6 +14,7 @@ from job_board_scraper.models.job import JobRecord, RawJobData
 
 if TYPE_CHECKING:
     from job_board_scraper.adapters.base import BaseAdapter
+    from job_board_scraper.etl.transformer import SupportsTitleTranslation
 
 logger = logging.getLogger(__name__)
 
@@ -29,6 +30,12 @@ class Extractor:
 
     def __init__(self) -> None:
         self._transformer = Transformer()
+
+    def set_vilao_translator(
+        self, translator: SupportsTitleTranslation | None
+    ) -> None:
+        """Inject or remove a Vilao translator at runtime."""
+        self._transformer.set_vilao_translator(translator)
 
     async def extract_from_adapter(
         self,
@@ -63,7 +70,12 @@ class Extractor:
 
         raw_jobs = self._parse_raw_jobs(result.jobs, adapter.slug)
 
-        records, errors = self._transformer.transform_batch(raw_jobs, company_id)
+        if self._transformer._vilao is not None:
+            records, errors = await self._transformer.transform_batch_async(
+                raw_jobs, company_id
+            )
+        else:
+            records, errors = self._transformer.transform_batch(raw_jobs, company_id)
 
         logger.info(
             "Extraction complete",
@@ -80,28 +92,41 @@ class Extractor:
 
     def _parse_raw_jobs(
         self,
-        raw_dicts: list[dict],
+        raw_items: list[Any],
         source_company_id: str,
     ) -> list[RawJobData]:
-        """Parse raw job dictionaries into RawJobData models.
+        """Normalise adapter-emitted payload into ``RawJobData`` instances.
 
         Args:
-            raw_dicts: List of raw job dictionaries from adapter
-            source_company_id: Company slug for context
+            raw_items: Either raw dicts (legacy API/HTML adapters) or
+                already-validated ``RawJobData`` instances (modern Greenhouse
+                adapters like OPSWAT). Both shapes are accepted; the
+                canonical form is what flows downstream.
+            source_company_id: Company slug, used to stamp dict-shaped items
+                so they pass ``RawJobData`` validation.
 
         Returns:
-            List of validated RawJobData instances
+            List of validated ``RawJobData`` instances. Items that fail
+            validation are skipped with a warning rather than raising.
         """
         parsed: list[RawJobData] = []
-        for job_dict in raw_dicts:
+        for item in raw_items:
             try:
-                job_dict["source_company_id"] = source_company_id
-                raw = RawJobData(**job_dict)
-                parsed.append(raw)
+                if isinstance(item, RawJobData):
+                    parsed.append(item)
+                    continue
+                if not isinstance(item, dict):
+                    logger.warning(
+                        "Skipping raw job item of unexpected type",
+                        extra={"type": type(item).__name__},
+                    )
+                    continue
+                item["source_company_id"] = source_company_id
+                parsed.append(RawJobData(**item))
             except Exception as e:
                 logger.warning(
                     "Failed to parse raw job dict",
-                    extra={"error": str(e), "job_dict": job_dict},
+                    extra={"error": str(e), "job_dict": item},
                 )
         return parsed
 

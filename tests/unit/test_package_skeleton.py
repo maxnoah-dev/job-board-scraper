@@ -67,10 +67,20 @@ EXPECTED_PACKAGES: list[str] = [
     "job_board_scraper.adapters.implementations",
     "job_board_scraper.adapters.implementations.opswat_adapter",
     "job_board_scraper.adapters.implementations.vancity_adapter",
+    "job_board_scraper.adapters.implementations.farm_credit_canada_adapter",
+    "job_board_scraper.adapters.implementations.caloptima_adapter",
+    "job_board_scraper.adapters.implementations.iqmetrix_adapter",
+    "job_board_scraper.adapters.implementations.first_west_adapter",
+    "job_board_scraper.adapters.implementations.electric_power_engineers_adapter",
+    "job_board_scraper.adapters.implementations.absolute_security_adapter",
     "job_board_scraper.adapters.implementations.techcorp_adapter",
     "job_board_scraper.adapters.implementations.tiktok_adapter",
     "job_board_scraper.adapters.implementations.northrop_adapter",
     "job_board_scraper.adapters.implementations.startup_xyz_adapter",
+    # llm/  (Vilao integration)
+    "job_board_scraper.llm",
+    "job_board_scraper.llm.vilao_client",
+    "job_board_scraper.llm.translator",
     # monitoring/
     "job_board_scraper.monitoring",
     "job_board_scraper.monitoring.alert_manager",
@@ -93,9 +103,11 @@ EXPECTED_PACKAGES: list[str] = [
     # reporting/
     "job_board_scraper.reporting",
     "job_board_scraper.reporting.csv_exporter",
+    "job_board_scraper.reporting.excel_exporter",
     # web/
     "job_board_scraper.web",
     "job_board_scraper.web.app",
+    "job_board_scraper.web.templating",
     "job_board_scraper.web.routes",
     "job_board_scraper.web.routes.api",
     "job_board_scraper.web.routes.companies",

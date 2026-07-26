@@ -1,9 +1,13 @@
 """Unit tests for the ETL Extractor (src/job_board_scraper/etl/extractor.py).
 
-Regression coverage for the AttributeError bug where adapters constructed
-``ExtractionResult(status="failed")`` with a plain string but the extractor
-read ``result.status.value``. That mismatch made every company return zero
-jobs because the pipeline crashed before transformation.
+Regression coverage for two related bugs:
+
+1. ``AttributeError`` on ``result.status.value`` when adapters constructed
+   ``ExtractionResult(status="failed")`` with a plain string. The extractor
+   must tolerate both enum and string status values.
+2. Real adapters (e.g. OPSWAT) populate ``ExtractionResult.jobs`` with
+   already-validated ``RawJobData`` Pydantic models, not raw dicts. The
+   extractor must accept both shapes so the pipeline can store jobs.
 """
 
 from __future__ import annotations
@@ -14,6 +18,7 @@ import pytest
 
 from job_board_scraper.adapters.base import ExtractionResult, ExtractionStatus
 from job_board_scraper.etl.extractor import Extractor
+from job_board_scraper.models.job import RawJobData
 
 
 class StubAdapter:
@@ -148,3 +153,80 @@ class TestExtractorHappyPath:
         assert errors == []
         titles = {r.title for r in records}
         assert titles == {"Backend Engineer", "Frontend Engineer"}
+
+
+@pytest.mark.unit
+class TestExtractorRawJobDataItems:
+    """Real adapters (OPSWAT, Vancity, ...) put ``RawJobData`` objects into
+    ``ExtractionResult.jobs`` rather than raw dicts. The extractor must accept
+    both shapes; otherwise every scrape silently drops 100% of jobs.
+    """
+
+    @pytest.mark.asyncio
+    async def test_accepts_rawjobdata_items_in_result_jobs(self) -> None:
+        raw_items = [
+            RawJobData(
+                source_company_id="opswat",
+                title="Senior Backend Engineer",
+                url="https://www.opswat.com/jobs/1",
+                location="Ho Chi Minh City",
+                source_job_id="1",
+                date_posted="2026-07-15",
+            ),
+            RawJobData(
+                source_company_id="opswat",
+                title="Frontend Engineer",
+                url="https://www.opswat.com/jobs/2",
+                location="Remote",
+                source_job_id="2",
+                date_posted="2026-07-14",
+            ),
+        ]
+        adapter = StubAdapter(
+            slug="opswat",
+            result=ExtractionResult(
+                jobs=raw_items,  # type: ignore[arg-type]
+                status=ExtractionStatus.SUCCESS,
+            ),
+        )
+        extractor = Extractor()
+
+        records, errors = await extractor.extract_from_adapter(adapter, company_id=1)
+
+        assert errors == []
+        assert len(records) == 2
+        titles = {r.title for r in records}
+        assert titles == {"Senior Backend Engineer", "Frontend Engineer"}
+        assert all(r.company_id == 1 for r in records)
+
+    @pytest.mark.asyncio
+    async def test_accepts_mixed_dict_and_rawjobdata_items(self) -> None:
+        """Some adapters may return dicts, others return RawJobData. The
+        extractor must normalise both into ``JobRecord`` without crashing."""
+        raw_item = RawJobData(
+            source_company_id="opswat",
+            title="Already Parsed",
+            url="https://www.opswat.com/jobs/3",
+            source_job_id="3",
+        )
+        dict_item = {
+            "source_company_id": "opswat",
+            "title": "Still Dict",
+            "url": "https://www.opswat.com/jobs/4",
+            "source_job_id": "4",
+        }
+        adapter = StubAdapter(
+            slug="opswat",
+            result=ExtractionResult(
+                jobs=[raw_item, dict_item],  # type: ignore[list-item]
+                status=ExtractionStatus.SUCCESS,
+            ),
+        )
+        extractor = Extractor()
+
+        records, errors = await extractor.extract_from_adapter(adapter, company_id=2)
+
+        assert errors == []
+        assert len(records) == 2
+        titles = {r.title for r in records}
+        assert titles == {"Already Parsed", "Still Dict"}

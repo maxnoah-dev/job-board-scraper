@@ -259,6 +259,10 @@ class JobRecord(BaseModel):
         description="Canonical job title",
         min_length=1,
     )
+    title_vi: str | None = Field(
+        default=None,
+        description="Vietnamese translation of the title (populated by Vilao LLM).",
+    )
     location: str = Field(
         default="Remote",
         description="Job location (defaults to 'Remote')",
@@ -284,6 +288,10 @@ class JobRecord(BaseModel):
     source_job_id: str | None = Field(
         default=None,
         description="Source system job ID",
+    )
+    salary_raw: str | None = Field(
+        default=None,
+        description="Raw salary text as extracted from the source.",
     )
     raw_data: dict[str, Any] | None = Field(
         default=None,

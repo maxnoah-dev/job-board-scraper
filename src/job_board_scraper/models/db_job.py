@@ -49,10 +49,11 @@ class Job(Base):
     company_id: Mapped[int] = mapped_column(
         Integer, ForeignKey("companies.id"), nullable=False
     )
-    company: Mapped["Company"] = relationship(  # noqa: F821
+    company: Mapped[Company] = relationship(  # noqa: F821
         "Company", back_populates="jobs", lazy="selectin"
     )
     title: Mapped[str] = mapped_column(String(500), nullable=False)
+    title_vi: Mapped[str | None] = mapped_column(String(500), nullable=True)
     location: Mapped[str] = mapped_column(String(255), default="Remote", nullable=False)
     url: Mapped[str] = mapped_column(String(2000), nullable=False)
     canonical_url: Mapped[str] = mapped_column(String(2000), nullable=False)
@@ -61,6 +62,7 @@ class Job(Base):
     )
     status: Mapped[str] = mapped_column(String(20), default="open", nullable=False)
     source_job_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    salary_raw: Mapped[str | None] = mapped_column(String(200), nullable=True)
     raw_data: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),

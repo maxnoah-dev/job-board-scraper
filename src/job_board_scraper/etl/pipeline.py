@@ -125,6 +125,7 @@ class ScrapingPipeline:
         company_slugs: list[str] | None = None,
         dry_run: bool = False,
         triggered_by: str = "manual",
+        enable_vilao: bool = False,
     ) -> PipelineResult:
         """Execute the full scrape pipeline.
 
@@ -132,6 +133,8 @@ class ScrapingPipeline:
             company_slugs: Specific companies to scrape. None = all active companies.
             dry_run: If True, skip database writes.
             triggered_by: What triggered this run (e.g., "manual", "scheduled").
+            enable_vilao: When True, attach a Vilao LLM translator to the
+                transformer so ``JobRecord.title_vi`` is populated.
 
         Returns:
             PipelineResult with overall status and per-company metrics.
@@ -143,6 +146,7 @@ class ScrapingPipeline:
                 "company_slugs": company_slugs,
                 "dry_run": dry_run,
                 "triggered_by": triggered_by,
+                "enable_vilao": enable_vilao,
             },
         )
 
@@ -150,6 +154,9 @@ class ScrapingPipeline:
         company_results: list[ScrapeResult] = []
 
         try:
+            vilao_translator = self._build_vilao_translator(enable_vilao)
+            self._extractor.set_vilao_translator(vilao_translator)
+
             if company_slugs:
                 companies = await self._get_companies_by_slugs(company_slugs)
             else:
@@ -507,21 +514,96 @@ class ScrapingPipeline:
         }
         return mapping.get(status, RunStatus.FAILED)
 
+    @staticmethod
+    def _build_vilao_translator(enable_vilao: bool):
+        """Construct a Vilao translator when the feature is enabled.
+
+        Returns ``None`` when the operator has not enabled the feature or
+        the configuration is incomplete — this keeps Vilao fully opt-in.
+        """
+        if not enable_vilao:
+            return None
+        try:
+            from job_board_scraper.core.config import get_settings
+            from job_board_scraper.llm import (
+                TitleTranslator,
+                VilaoClient,
+                VilaoClientConfig,
+            )
+        except Exception:  # pragma: no cover — defensive
+            logger.exception("Failed to import Vilao integration")
+            return None
+        settings = get_settings()
+        if not settings.VILAO_ENABLED or not settings.VILAO_API_KEY:
+            logger.info("Vilao requested but disabled via settings; skipping.")
+            return None
+        client = VilaoClient(
+            VilaoClientConfig(
+                api_key=settings.VILAO_API_KEY,
+                base_url=settings.VILAO_BASE_URL,
+                model=settings.VILAO_MODEL,
+                timeout_s=settings.VILAO_TIMEOUT_S,
+                rate_limit_per_min=settings.VILAO_RATE_LIMIT_PER_MIN,
+                fail_threshold=settings.VILAO_FAIL_THRESHOLD,
+            )
+        )
+        return TitleTranslator(client)
+
 
 def create_pipeline() -> ScrapingPipeline:
     """Create a pipeline with all built-in adapters registered."""
+    from job_board_scraper.adapters.implementations.absolute_security_adapter import (
+        AbsoluteSecurityAdapter,
+    )
+    from job_board_scraper.adapters.implementations.caloptima_adapter import (
+        CalOptimaAdapter,
+    )
+    from job_board_scraper.adapters.implementations.electric_power_engineers_adapter import (  # noqa: E501
+        ElectricPowerEngineersAdapter,
+    )
+    from job_board_scraper.adapters.implementations.farm_credit_canada_adapter import (
+        FarmCreditCanadaAdapter,
+    )
+    from job_board_scraper.adapters.implementations.first_west_adapter import (
+        FirstWestAdapter,
+    )
+    from job_board_scraper.adapters.implementations.iqmetrix_adapter import (
+        IqmetrixAdapter,
+    )
+    from job_board_scraper.adapters.implementations.northrop_adapter import (
+        NorthropAdapter,
+    )
     from job_board_scraper.adapters.implementations.opswat_adapter import OpswatAdapter
     from job_board_scraper.adapters.implementations.techcorp_adapter import (
         TechCorpAdapter,
+    )
+    from job_board_scraper.adapters.implementations.tiktok_adapter import (
+        TiktokAdapter,
     )
     from job_board_scraper.adapters.implementations.vancity_adapter import (
         VancityAdapter,
     )
     from job_board_scraper.adapters.registry import registry
 
-    adapter_types = (OpswatAdapter, VancityAdapter, TechCorpAdapter)
+    adapter_types = (
+        OpswatAdapter,
+        VancityAdapter,
+        FarmCreditCanadaAdapter,
+        CalOptimaAdapter,
+        IqmetrixAdapter,
+        FirstWestAdapter,
+        ElectricPowerEngineersAdapter,
+        AbsoluteSecurityAdapter,
+        TechCorpAdapter,
+        TiktokAdapter,
+        NorthropAdapter,
+    )
     for adapter_type in adapter_types:
-        adapter = adapter_type()
+        try:
+            adapter = adapter_type()
+        except Exception:  # noqa: BLE001
+            logger.exception("Failed to instantiate %s", adapter_type.__name__)
+            continue
         if registry.get_or_none(adapter.slug) is None:
             registry.register(adapter)
 

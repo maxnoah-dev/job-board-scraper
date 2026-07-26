@@ -20,6 +20,7 @@ class OpswatAdapter(ApiAdapter):
     API Endpoint: https://boards-api.greenhouse.io/v1/boards/{board_token}/jobs
     """
 
+    slug = "opswat"
     SLUG = "opswat"
     BOARD_TOKEN = "opswat"  # noqa: S105 - Board identifier, not a secret
 
@@ -28,10 +29,6 @@ class OpswatAdapter(ApiAdapter):
             base_url=f"https://boards-api.greenhouse.io/v1/boards/{self.BOARD_TOKEN}",
             **kwargs,
         )
-
-    @property
-    def slug(self) -> str:
-        return self.SLUG
 
     def _get_listing_url(self, page: int = 1, per_page: int = 100) -> str:
         return f"{self._base_url}/jobs?page={page}&per_page={per_page}"

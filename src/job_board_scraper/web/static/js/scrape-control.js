@@ -123,18 +123,28 @@
             .replace(/'/g, "&#39;");
     }
 
+    /* Tracks which buttons have already had their original HTML captured so a
+     * second busy call (e.g. "starting" -> "running") does not overwrite the
+     * genuine original markup with the spinner markup we just inserted. */
+    var capturedOriginalHtml = new WeakSet();
+
     function setButtonsBusy(busy, runningText) {
         var buttons = document.querySelectorAll("[data-scrape-trigger]");
         for (var i = 0; i < buttons.length; i++) {
             var btn = buttons[i];
             btn.disabled = busy;
             if (busy) {
-                btn.dataset.originalHtml = btn.innerHTML;
+                if (!capturedOriginalHtml.has(btn)) {
+                    btn.dataset.originalHtml = btn.innerHTML;
+                    capturedOriginalHtml.add(btn);
+                }
                 btn.innerHTML =
                     '<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>' +
                     escapeHtml(runningText || t("scrape.running"));
             } else if (btn.dataset.originalHtml) {
                 btn.innerHTML = btn.dataset.originalHtml;
+                delete btn.dataset.originalHtml;
+                capturedOriginalHtml.delete(btn);
             }
         }
     }

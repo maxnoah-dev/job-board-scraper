@@ -26,10 +26,15 @@
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | opswat | OPSWAT | `api` | Greenhouse (cần xác nhận) | https://www.opswat.com/careers | true | `needs-review` | TBD | Xác nhận URL board chính xác và mô hình auth. Giai đoạn 4 chỉ dùng fixture giả lập. |
 | vancity | Vancity | `api` | Workday (cần xác nhận) | https://jobs.vancity.com | true | `needs-review` | TBD | Xác nhận tenant Workday và truy cập công khai. Giai đoạn 5 chỉ dùng fixture giả lập. |
-| tiktok | TikTok | `browser` | Tuỳ biến | https://careers.tiktok.com | true | `blocked-by-policy` | TBD | Hoãn cho bản phát hành 1 — xem `compliance-notes.md`. |
-| northrop | Northrop Grumman | `browser` | Tuỳ biến | https://www.northropgrumman.com/careers | true | `blocked-by-policy` | TBD | Hoãn cho bản phát hành 1 — xem `compliance-notes.md`. |
-| absolute-security | Absolute Security | TBD | TBD | TBD | TBD | `blocked-pending-owner` | TBD | Được nêu trong `PLAN.md`; thiếu URL/ATS/owner. |
-| farm-credit-canada | Farm Credit Canada | TBD | TBD | TBD | TBD | `blocked-pending-owner` | TBD | Được nêu trong `PLAN.md`; thiếu URL/ATS/owner. |
+| tiktok | TikTok | `browser` | Tuỳ biến | https://careers.tiktok.com | true | `needs-review` | TBD | Giai đoạn 11: cho phép browser scraping theo ADR-0008 (stealth + headless + fail-fast). |
+| northrop | Northrop Grumman | `browser` | Workday redirect | https://www.northropgrumman.com/careers | true | `needs-review` | TBD | Giai đoạn 11: cho phép browser scraping theo ADR-0008 (stealth + headless + fail-fast). |
+| absolute-security | Absolute Security | `html` | Jobvite (công khai) | https://jobs.jobvite.com/absolute/jobs | true | `needs-review` | TBD | Jobvite không expose JSON feed public → bắt buộc HTML scrape. |
+| farm-credit-canada | Farm Credit Canada | `api` | Workday (tenant `fccfac`) | https://fccfac.wd3.myworkdayjobs.com/en-US/careers-carrieres | true | `needs-review` | TBD | Workday tenant đã xác nhận qua manifest. |
+| caloptima | CalOptima | `html` | PageUp | https://careers.pageuppeople.com/1150/cw/en-us/listing/ | true | `needs-review` | TBD | Server-rendered HTML. |
+| iqmetrix | iQmetrix | `html` | JazzHR | https://iqmetrix.applytojob.com/apply | true | `needs-review` | TBD | JazzHR server-rendered; URL tuyệt đối. |
+| first-west | First West Credit Union | `html` | Custom | https://careers.firstwestcu.ca/ | true | `needs-review` | TBD | Server-rendered HTML (đã rebrand sang Tru Cooperative). |
+| electric-power-engineers | Electric Power Engineers | `html` | Jibe | https://join.epeconsulting.com/EPE-Engineering-Jobs/jobs | true | `needs-review` | TBD | Server-rendered HTML. |
+| specialized-exports | Specialized Exports | TBD | TBD | TBD | TBD | `blocked-pending-owner` | TBD | Chưa tìm được ATS công khai; cần owner cung cấp URL. |
 | source-07 | (TBD) | TBD | TBD | TBD | TBD | `blocked-pending-owner` | TBD | Vị trí mở — product owner cung cấp. |
 | source-08 | (TBD) | TBD | TBD | TBD | TBD | `blocked-pending-owner` | TBD | Vị trí mở — product owner cung cấp. |
 | source-09 | (TBD) | TBD | TBD | TBD | TBD | `blocked-pending-owner` | TBD | Vị trí mở — product owner cung cấp. |
@@ -40,9 +45,9 @@
 
 | adapter_type | nguồn (số lượng) | bật cho bản phát hành 1 | câu hỏi mở |
 | --- | --- | --- | --- |
-| `api` | 2 xác nhận (`opswat`, `vancity`) | có, fixture-first | Xác nhận tenant Greenhouse/Workday và truy cập công khai. |
-| `html` | 0 xác nhận | có, chỉ khung | Sẽ suy ra từ các hàng `blocked-pending-owner` khi URL đã biết. |
-| `browser` | 2 xác nhận (`tiktok`, `northrop`) | **không** | Cả hai bị hoãn qua `blocked-by-policy`; xem `compliance-notes.md`. |
+| `api` | 3 xác nhận (`opswat`, `vancity`, `farm-credit-canada`) | có, fixture-first | Xác nhận tenant Greenhouse/Workday và truy cập công khai. |
+| `html` | 5 xác nhận (`caloptima`, `iqmetrix`, `first-west`, `electric-power-engineers`, `absolute-security`) | có, chỉ khung | Selector có thể thay đổi — khoè theo fixture. |
+| `browser` | 2 xác nhận (`tiktok`, `northrop`) | **có, theo ADR-0008** | Phải dùng stealth + headless; fail-fast khi gặp challenge. |
 
 ## Tập nguồn hiệu lực bản phát hành 1
 

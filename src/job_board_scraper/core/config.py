@@ -133,6 +133,39 @@ class AppSettings(BaseSettings):
         "Enabling browser adapters without this causes startup failure.",
     )
 
+    # ─── LLM Integration (Vilao) ─────────────────────────────────────────────
+    VILAO_API_KEY: str = Field(
+        default="",
+        description="Personal access token for VilaoLLM. Leave empty to "
+        "disable all LLM features (default).",
+    )
+    VILAO_ENABLED: bool = Field(
+        default=False,
+        description="Master switch for LLM-powered features. When True and "
+        "VILAO_API_KEY is set, the pipeline translates titles to Vietnamese.",
+    )
+    VILAO_MODEL: str = Field(
+        default="gx/gpt-5.4",
+        description="LLM model name. Default is Vilao's flagship gpt-5.4 alias.",
+    )
+    VILAO_BASE_URL: str = Field(
+        default="https://api.vilao.ai/v1",
+        description="OpenAI-compatible base URL for Vilao.",
+    )
+    VILAO_TIMEOUT_S: float = Field(
+        default=15.0,
+        description="Request timeout for Vilao API calls in seconds.",
+    )
+    VILAO_RATE_LIMIT_PER_MIN: int = Field(
+        default=60,
+        description="Soft rate limit (requests per minute) for Vilao. Hard limit is 120.",
+    )
+    VILAO_FAIL_THRESHOLD: int = Field(
+        default=3,
+        description="Number of consecutive Vilao failures before the "
+        "circuit breaker disables LLM for the rest of the run.",
+    )
+
     # ─── Export ────────────────────────────────────────────────────────────
     EXPORT_DIR: str = Field(
         default="./data",

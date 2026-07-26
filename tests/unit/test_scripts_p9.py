@@ -62,26 +62,28 @@ class TestSeedCompaniesScript:
         slugs = {c["slug"] for c in scripts.seed_companies._SEED_COMPANIES}
         assert "opswat" in slugs
         assert "vancity" in slugs
-        assert "techcorp" in slugs
+        assert "farm-credit-canada" in slugs
+        assert "caloptima" in slugs
+        assert "iqmetrix" in slugs
+        assert "first-west" in slugs
+        assert "electric-power-engineers" in slugs
+        assert "absolute-security" in slugs
+        assert "tiktok" in slugs
+        assert "northrop" in slugs
 
-    def test_seed_companies_skips_blocked(self) -> None:
-        """Browser/blocked sources must not be active."""
+    def test_seed_companies_browser_sources_carry_adr(self) -> None:
+        """Browser adapters must reference ADR-0008 (no longer blocked)."""
         src = PROJECT_ROOT / "src"
         if str(src) not in sys.path:
             sys.path.insert(0, str(src))
         import scripts.seed_companies
 
         for company in scripts.seed_companies._SEED_COMPANIES:
-            if company["slug"] == "tiktok":
-                assert company["is_active"] is False, (
-                    "TikTok must be inactive (blocked-by-policy)"
+            if company["slug"] in {"tiktok", "northrop"}:
+                assert company["compliance_status"] == "needs-review", (
+                    "Browser sources must be needs-review per ADR-0008."
                 )
-                assert company["compliance_status"] == "blocked-by-policy"
-            if company["slug"] == "northrop":
-                assert company["is_active"] is False, (
-                    "Northrop must be inactive (blocked-by-policy)"
-                )
-                assert company["compliance_status"] == "blocked-by-policy"
+                assert company["config"].get("adr") == "0008-chrome-anti-bot"
 
 
 class TestCliEntrypoint:

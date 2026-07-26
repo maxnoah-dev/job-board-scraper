@@ -1,160 +1,139 @@
-"""Northrop Grumman adapter (DEFERRED).
+"""Northrop Grumman adapter.
 
-Browser adapter for careers.northropgrumman.com.
-
-STATUS: blocked-by-policy per ADR-0007 and docs/sources/compliance-notes.md.
-
-This adapter is scaffolded and ready for implementation once:
-1. Compliance status is updated to 'approved' in the manifest
-2. Product owner provides explicit sign-off
-3. A legal/compliance path is established (data-sharing agreement or similar)
-
-Until then, this adapter will NOT be loaded by the registry even if enabled
-in config. See AdapterRegistry behavior for blocked sources.
+Browser adapter for northropgrumman.com/careers. Per ADR-0008, this
+adapter is allowed to use Playwright with stealth flags. Restrictions:
+headless required, no proxy rotation, no CAPTCHA bypass, fail fast on
+challenge.
 """
 
 from __future__ import annotations
 
+import logging
 from typing import TYPE_CHECKING, Any
+
+from bs4 import BeautifulSoup
 
 from job_board_scraper.adapters.protocols.browser_adapter import BrowserAdapter
 from job_board_scraper.models.job import RawJobData
+from job_board_scraper.utils.browser import AntiBotDetection
+from job_board_scraper.utils.html_parser import parse_html
 
 if TYPE_CHECKING:
     from playwright.async_api import Page
 
 
+logger = logging.getLogger(__name__)
+
+
 # Compliance status (must match manifest)
-COMPLIANCE_STATUS = "blocked-by-policy"
-"""This source is blocked per ADR-0007 compliance policy."""
+COMPLIANCE_STATUS = "needs-review"
+"""Allowed by ADR-0008 — browser scraping with stealth guardrails."""
 
 
 class NorthropAdapter(BrowserAdapter):
     """Northrop Grumman careers adapter using browser automation.
 
-    STATUS: DEFERRED - See COMPLIANCE_STATUS above.
-
-    This adapter requires:
-    - Browser automation to handle Workday-based career portal
-    - Cloudflare-style anti-bot detection
-    - Job search/filter handling
-    - Pagination through results
-
-    Expected job board structure (from initial analysis):
-    - ATS: Workday with custom frontend
-    - URL pattern: https://www.northropgrumman.com/careers (redirects to Workday)
-    - Cloudflare challenges appear under load
-    - Jobs loaded dynamically via JavaScript
-
-    Implementation notes when unblocked:
-    - Northrop uses Workday ATS with heavy anti-bot protection
-    - Cloudflare challenges may appear on initial access
-    - May require Workday authentication for full job access
-    - Rate limiting is enforced
+    Source: https://www.northropgrumman.com/careers (redirects to Workday SPA).
+    Guardrails enforced by ADR-0008.
     """
 
+    slug = "northrop"
     SLUG = "northrop"
     BASE_URL = "https://www.northropgrumman.com/careers"
 
-    # Known Cloudflare challenge patterns
-    CLOUDFLARE_PATTERNS = [
+    CLOUDFLARE_PATTERNS = (
         "Checking your browser",
         "Just a moment",
         "Cloudflare Ray ID",
-    ]
+        "Attention Required",
+    )
 
-    def __init__(self, **kwargs) -> None:
-        """Initialize Northrop Grumman adapter.
-
-        Args:
-            **kwargs: Arguments passed to BrowserAdapter.
-        """
+    def __init__(self, **kwargs: Any) -> None:
         super().__init__(
             base_url=self.BASE_URL,
+            headless=kwargs.pop("headless", True),
+            navigation_timeout_ms=kwargs.pop("navigation_timeout_ms", 30000),
             **kwargs,
         )
 
-    @property
-    def slug(self) -> str:
-        return self.SLUG
-
     def _get_listing_url(self, page: int = 1) -> str:
-        """Get the job search/careers URL.
-
-        Args:
-            page: Page number for pagination.
-
-        Returns:
-            Full URL for the listings page.
-        """
-        # Placeholder - redirects to Workday in production
+        """Return the careers listing URL (Workday host)."""
         return f"{self.BASE_URL}?page={page}"
 
-    def _parse_jobs(self, page_content: str | Any) -> list[RawJobData]:
-        """Parse jobs from page content.
+    def _parse_jobs(self, page_content: str | Any) -> list[RawJobData]:  # type: ignore[override]
+        """Parse jobs from the Workday SPA HTML.
 
-        NOTE: This is a placeholder. Actual implementation requires:
-        - Workday-specific DOM parsing
-        - Anti-bot/Cloudflare handling
-        - Dynamic content waiting
-
-        Args:
-            page_content: Raw HTML or page object.
-
-        Returns:
-            Empty list until implementation is unblocked.
+        Workday renders job cards inside <li data-automation-id="jobListItem"> or
+        similar; we use a permissive selector list as a best-effort default.
         """
-        # Return empty until unblocked
-        return []
+        if hasattr(page_content, "content") and callable(getattr(page_content, "content", None)):
+            html = str(page_content.content())  # type: ignore[attr-defined]
+        else:
+            html = str(page_content)
+
+        soup: BeautifulSoup = parse_html(html, parser="lxml")  # type: ignore[arg-type]
+        jobs: list[RawJobData] = []
+
+        for card in soup.select(  # type: ignore[arg-type]
+            '[data-automation-id="jobListItem"], [data-automation-id="job"], li.job'
+        ):
+            title_el = card.select_one(
+                '[data-automation-id="jobTitle"], a, h3'
+            )
+            loc_el = card.select_one(
+                '[data-automation-id="jobLocation"], .location'
+            )
+            if not title_el:
+                continue
+            href_raw = title_el.get("href")
+            href: str | None = str(href_raw) if href_raw else None
+            if not href:
+                continue
+            url: str = (
+                href
+                if href.startswith("http")
+                else f"https://www.northropgrumman.com{href}"
+            )
+            jobs.append(
+                RawJobData(
+                    source_company_id=self.slug,
+                    title=title_el.get_text(strip=True),
+                    url=url,
+                    location=(
+                        loc_el.get_text(strip=True) if loc_el else "Falls Church, VA"
+                    ),
+                    raw_data={"sourced_via": "browser"},
+                )
+            )
+        return jobs
+
+    async def _post_navigation(self, page: Page) -> None:
+        """Wait for at least one Workday job-item selector to appear."""
+        try:
+            await page.wait_for_selector(
+                '[data-automation-id="jobListItem"], [data-automation-id="job"]',
+                timeout=self._element_timeout_ms,
+            )
+        except Exception:  # noqa: BLE001 — selector is best-effort
+            logger.debug("Northrop job-list selector not found; continuing.")
 
     async def _handle_anti_bot(
         self,
-        detection: BrowserAdapter.AntiBotDetection,
+        detection: "AntiBotDetection",
         page: Page | None = None,
     ) -> bool:
-        """Handle Cloudflare-style anti-bot challenge.
-
-        NOTE: Per ADR-0007, we do NOT implement anti-bot bypass.
-        This method logs the detection and returns False.
-
-        Args:
-            detection: Anti-bot detection result.
-            page: Playwright page.
-
-        Returns:
-            False (challenge not handled - as required by policy).
-        """
-        import logging
-
-        logger = logging.getLogger(f"{__name__}.{self.slug}")
-
+        """Per ADR-0008, never bypass anti-bot. Log and return False."""
         logger.warning(
-            "Northrop Grumman anti-bot challenge detected (type=%s). "
-            "Per ADR-0007, we do not implement bypass. "
-            "Source is compliance-blocked until product owner sign-off.",
+            "Northrop anti-bot challenge detected (%s). "
+            "Per ADR-0008 we do NOT bypass. Failing fast.",
             detection.challenge_type,
         )
         return False
 
 
-# ---------------------------------------------------------------------------
-# Module-level compliance check
-# ---------------------------------------------------------------------------
-
-
 def is_compliance_blocked() -> bool:
-    """Check if this adapter is blocked by compliance policy.
-
-    Returns:
-        True if source is blocked-by-policy per manifest.
-    """
     return COMPLIANCE_STATUS == "blocked-by-policy"
 
 
 def get_compliance_status() -> str:
-    """Get the current compliance status.
-
-    Returns:
-        Compliance status string.
-    """
     return COMPLIANCE_STATUS

@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import asyncio
 import sys
+from datetime import UTC, datetime
 from pathlib import Path
 from unittest.mock import AsyncMock, patch
 
@@ -265,3 +266,73 @@ async def test_status_running_during_run(setup_db, seed_company, reset_trigger):
                 assert body["run_id"] is not None
 
                 release.set()
+
+
+@pytest.mark.asyncio
+async def test_status_finished_after_run_completes(
+    setup_db, seed_company, reset_trigger
+):
+    """Regression: after the pipeline finishes, ``state`` must become ``finished``
+    so the frontend polling stops and clears the spinner.
+
+    Bug: the previous backend constructed ``self._last`` *before* setting
+    ``ctx.done``, so any status call that returned the cached snapshot
+    reported ``state="running"`` indefinitely, leaving the UI spinner stuck.
+    """
+    from job_board_scraper.etl.pipeline import PipelineExitCode, PipelineResult
+
+    finished = asyncio.Event()
+
+    async def quick_run(**_k):
+        return PipelineResult(
+            run_id=1,
+            status=PipelineExitCode.SUCCESS,
+            started_at=datetime.now(UTC),
+            finished_at=datetime.now(UTC),
+        )
+
+    pipeline = AsyncMock()
+    # Wire ``pipeline.run`` directly to ``quick_run`` so the recursive
+    # ``pipeline.run`` call inside the tracking wrapper terminates.
+    pipeline.run = quick_run
+
+    from job_board_scraper.web.services import scrape_trigger as trigger_mod
+
+    async def tracking_run(*args, **kwargs):
+        try:
+            return await quick_run(*args, **kwargs)
+        finally:
+            finished.set()
+
+    pipeline.run = tracking_run
+
+    with patch(
+        "job_board_scraper.web.services.scrape_trigger.create_pipeline",
+        return_value=pipeline,
+    ):
+        from job_board_scraper.web.app import create_app
+
+        app = create_app()
+        transport = ASGITransport(app=app)
+        async with (
+            AsyncClient(transport=transport, base_url="http://test") as client,
+            app.router.lifespan_context(app),
+        ):
+            resp = await client.post("/api/runs", json={})
+            assert resp.status_code == 202
+
+            # Wait for the pipeline to actually finish.
+            await asyncio.wait_for(finished.wait(), timeout=5)
+
+            # Give the trigger bookkeeping a chance to mark ``done``.
+            trigger = trigger_mod.get_trigger()
+            await asyncio.wait_for(trigger._current.done.wait(), timeout=5)
+
+            status = await client.get("/api/runs/status")
+            assert status.status_code == 200
+            body = status.json()
+            assert body["state"] == "finished", (
+                f"Expected state='finished' after run completes, got {body}"
+            )
+            assert body["last_status"] == "success"
+            assert body["finished_at"] is not None
