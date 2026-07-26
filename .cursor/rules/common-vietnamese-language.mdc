@@ -1,0 +1,75 @@
+---
+description: Buộc Cursor AI luôn phản hồi bằng tiếng Việt có dấu, giữ nguyên các thuật ngữ kỹ thuật và tên riêng.
+globs: "**/*"
+alwaysApply: true
+---
+
+# Quy tắc ngôn ngữ: Tiếng Việt có dấu
+
+## Nguyên tắc bắt buộc
+
+Cursor AI **PHẢI** luôn phản hồi bằng **tiếng Việt có dấu đầy đủ** (sử dụng đầy đủ các ký tự có dấu: ă, â, ơ, ư, ô, ê, đ, và các dấu sắc, huyền, hỏi, ngã, nặng).
+
+## Phạm vi áp dụng
+
+Quy tắc này áp dụng cho **mọi phản hồi** của AI trong workspace này, bao gồm nhưng không giới hạn:
+
+- Câu trả lời trong chat
+- Giải thích, hướng dẫn, thông báo lỗi
+- Commit message và PR description
+- Comment trong code (khi người dùng yêu cầu bằng tiếng Việt)
+- README, tài liệu khi người dùng yêu cầu
+
+## Ngoại lệ (giữ nguyên tiếng Anh / thuật ngữ gốc)
+
+Giữ nguyên **không dịch** đối với:
+
+1. **Tên riêng kỹ thuật**: tên package, class, function, variable, API endpoint, framework (ví dụ: `BaseAdapter`, `JobRepository`, `APScheduler`, `SQLAlchemy`, `Pydantic`, `asyncio`).
+2. **Thuật ngữ lập trình phổ biến** đã được Việt hóa nhưng vẫn dùng gốc trong cộng đồng:
+   - `commit`, `pull request`, `merge`, `branch`, `repository`, `debug`, `deploy`, `build`, `test`, `coverage`, `refactor`, `adapter`, `factory`, `dependency injection`, `async/await`, `middleware`, `endpoint`.
+3. **Thông báo lỗi / log / exception message** từ hệ thống hoặc runtime (giữ nguyên văn bản gốc, nhưng có thể thêm phần giải thích bằng tiếng Việt phía sau).
+4. **Khóa JSON / config key / tên trường database** (ví dụ: `job_url`, `date_posted`, `is_active`, `raw_data`).
+5. **Tên file, đường dẫn, URL, câu lệnh shell** — giữ nguyên định dạng gốc.
+
+## Hướng dẫn cụ thể
+
+### 1. Dấu thanh & dấu câu
+- Luôn dùng dấu đầy đủ trong tiếng Việt: `lập trình`, `đa luồng`, `cơ sở dữ liệu`, `ứng dụng`, `chức năng`, `triển khai`, `kiểm thử`.
+- **KHÔNG BAO GIỜ** viết kiểu không dấu như: `lap trinh`, `da luong`, `co so du lieu`, `ung dung`, `kiem thu`, `trien khai`.
+
+### 2. Định dạng danh sách
+- Khi liệt kê nhiều bước, dùng tiếng Việt có dấu cho phần mô tả, giữ nguyên tên hàm/file/package bằng tiếng Anh.
+
+Ví dụ:
+> - Tạo lớp `BaseAdapter` trong `src/adapters/base.py`.
+> - Cấu hình `APScheduler` để chạy định kỳ mỗi 6 giờ.
+
+### 3. Câu lệnh code
+- Khi viết code, comment (nếu có) bằng tiếng Việt có dấu, nhưng identifier (tên biến, hàm, class) giữ nguyên tiếng Anh.
+
+### 4. Trường hợp không chắc chắn
+- Nếu gặp thuật ngữ chưa rõ bản dịch tiếng Việt → **giữ nguyên tiếng Anh** và nếu cần, chú thích ngắn bằng tiếng Việt trong ngoặc đơn.
+
+## Ví dụ
+
+### ❌ Sai (không dấu / dùng tiếng Anh trộn lẫn không tự nhiên)
+
+```
+Toi se tao mot BaseAdapter moi de xu ly cac job listing.
+Sau do, toi se cau hinh APScheduler de chay dinh ky.
+Ham fetch_jobs se lay du lieu tu API.
+```
+
+### ✅ Đúng
+
+```
+Tôi sẽ tạo một lớp `BaseAdapter` mới để xử lý các job listing.
+Sau đó, tôi sẽ cấu hình `APScheduler` để chạy định kỳ.
+Hàm `fetch_jobs` sẽ lấy dữ liệu từ API.
+```
+
+## Lưu ý
+
+- Quy tắc này có `alwaysApply: true` — luôn được áp dụng trong workspace này.
+- Nếu người dùng yêu cầu rõ ràng phản hồi bằng ngôn ngữ khác (ví dụ: "reply in English"), tuân theo yêu cầu đó cho lượt tương ứng.
+- Văn bản trích dẫn nguyên văn từ tài liệu / log / stack trace → giữ nguyên bản gốc.

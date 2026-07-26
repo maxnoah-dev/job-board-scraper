@@ -12,7 +12,11 @@ from typing import TYPE_CHECKING, Any
 
 import httpx
 
-from job_board_scraper.adapters.base import BaseAdapterImpl, ExtractionResult
+from job_board_scraper.adapters.base import (
+    BaseAdapterImpl,
+    ExtractionResult,
+    ExtractionStatus,
+)
 from job_board_scraper.models.job import RawJobData
 from job_board_scraper.utils.html_parser import (
     JobListingConfig,
@@ -255,7 +259,7 @@ class HtmlAdapter(BaseAdapterImpl):
                     elif e.response.status_code in (401, 403):
                         return ExtractionResult(
                             jobs=all_jobs,
-                            status="failed",
+                            status=ExtractionStatus.FAILED,
                             error=f"Access denied: {e.response.status_code}",
                             pages_fetched=pages_fetched,
                             requests_made=requests_made,
@@ -275,7 +279,7 @@ class HtmlAdapter(BaseAdapterImpl):
         if not all_jobs and warnings:
             return ExtractionResult(
                 jobs=[],
-                status="failed",
+                status=ExtractionStatus.FAILED,
                 warnings=warnings,
                 pages_fetched=pages_fetched,
                 requests_made=requests_made,
@@ -283,7 +287,7 @@ class HtmlAdapter(BaseAdapterImpl):
 
         return ExtractionResult(
             jobs=all_jobs,
-            status="success" if all_jobs else "partial",
+            status=ExtractionStatus.SUCCESS if all_jobs else ExtractionStatus.PARTIAL,
             warnings=warnings if warnings else [],
             pages_fetched=pages_fetched,
             requests_made=requests_made,

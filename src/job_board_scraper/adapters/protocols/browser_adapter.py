@@ -12,7 +12,11 @@ from abc import abstractmethod
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-from job_board_scraper.adapters.base import BaseAdapterImpl, ExtractionResult
+from job_board_scraper.adapters.base import (
+    BaseAdapterImpl,
+    ExtractionResult,
+    ExtractionStatus,
+)
 from job_board_scraper.models.job import RawJobData
 from job_board_scraper.utils.browser import (
     AntiBotChallengeError,
@@ -378,7 +382,7 @@ class BrowserAdapter(BrowserManager, BaseAdapterImpl):
         except Exception as e:
             return ExtractionResult(
                 jobs=all_jobs,
-                status="failed",
+                status=ExtractionStatus.FAILED,
                 error=f"Browser extraction failed: {str(e)}",
                 warnings=warnings,
                 pages_fetched=pages_fetched,
@@ -394,14 +398,14 @@ class BrowserAdapter(BrowserManager, BaseAdapterImpl):
         # Determine status
         if not all_jobs and warnings:
             status = (
-                "failed"
+                ExtractionStatus.FAILED
                 if any("challenge" in w or "blocked" in w for w in warnings)
-                else "partial"
+                else ExtractionStatus.PARTIAL
             )
         elif warnings:
-            status = "partial"
+            status = ExtractionStatus.PARTIAL
         else:
-            status = "success"
+            status = ExtractionStatus.SUCCESS
 
         return ExtractionResult(
             jobs=all_jobs,

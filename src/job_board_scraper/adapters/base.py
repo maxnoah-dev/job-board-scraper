@@ -39,7 +39,9 @@ class ExtractionResult:
 
     Attributes:
         jobs: List of raw job dictionaries emitted by the adapter.
-        status: One of ``success``, ``partial``, ``failed``.
+        status: One of ``success``, ``partial``, ``failed`` (coerced to
+            ``ExtractionStatus`` regardless of whether callers pass an enum
+            member or a plain string).
         warnings: Non-fatal issues encountered (e.g. skipped page, malformed item).
         error: Fatal error message when ``status`` is ``failed``.
         pages_fetched: Number of pages/requests successfully fetched.
@@ -52,6 +54,17 @@ class ExtractionResult:
     error: str | None = None
     pages_fetched: int = 0
     requests_made: int = 0
+
+    def __post_init__(self) -> None:
+        """Coerce ``status`` to ``ExtractionStatus`` if a plain string slipped in.
+
+        Adapter protocols historically constructed ``ExtractionResult(status="failed")``
+        with a bare string. The dataclass accepted it because there was no validator,
+        which then crashed downstream code that read ``result.status.value``.
+        Normalising here makes the rest of the pipeline safe regardless of input.
+        """
+        if not isinstance(self.status, ExtractionStatus):
+            self.status = ExtractionStatus(self.status)
 
     def model_dump(self) -> dict:
         """Serialize to a plain dict for logging and testing."""

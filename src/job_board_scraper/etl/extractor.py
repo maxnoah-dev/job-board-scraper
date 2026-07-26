@@ -8,6 +8,7 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING
 
+from job_board_scraper.adapters.base import ExtractionStatus
 from job_board_scraper.etl.transformer import Transformer
 from job_board_scraper.models.job import JobRecord, RawJobData
 
@@ -47,7 +48,7 @@ class Extractor:
 
         result = await adapter.fetch_jobs()
 
-        if result.status.value == "failed":
+        if result.status is ExtractionStatus.FAILED:
             logger.error(
                 "Adapter extraction failed",
                 extra={"adapter": adapter.slug, "error": result.error},
