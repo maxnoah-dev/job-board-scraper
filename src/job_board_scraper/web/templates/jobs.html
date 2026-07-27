@@ -3,6 +3,9 @@
 {% block title %}{{ t('nav.jobs') }} - Job Board Scraper{% endblock %}
 
 {% block content %}
+<!-- Toast container for filter messages -->
+<div id="filter-toast-container" class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 1080;"></div>
+
 <div class="row mb-4">
     <div class="col-12">
         <h1 class="h3 mb-0 text-gray-800"><span data-i18n="nav.jobs">{{ t('nav.jobs') }}</span></h1>
@@ -57,8 +60,11 @@
             </div>
             <div class="row mt-3">
                 <div class="col-12">
-                    <button type="submit" class="btn btn-primary btn-sm"><span data-i18n="jobs.apply_filters">{{ t('jobs.apply_filters') }}</span></button>
-                    <a href="{{ url_for('list_jobs') }}" class="btn btn-outline-secondary btn-sm ms-2"><span data-i18n="jobs.clear_filters">{{ t('jobs.clear_filters') }}</span></a>
+                    <button type="submit" class="btn btn-primary btn-sm" id="apply-filters-btn">
+                        <span class="spinner-border spinner-border-sm me-1 d-none" id="filter-loading" role="status" aria-hidden="true"></span>
+                        <span data-i18n="jobs.apply_filters">{{ t('jobs.apply_filters') }}</span>
+                    </button>
+                    <a href="{{ url_for('list_jobs') }}" class="btn btn-outline-secondary btn-sm ms-2" id="clear-filters-btn"><span data-i18n="jobs.clear_filters">{{ t('jobs.clear_filters') }}</span></a>
                 </div>
             </div>
         </form>
@@ -67,21 +73,303 @@
 
 <script>
 (function() {
+    "use strict";
+
+    function getLocale() {
+        try {
+            var lang = localStorage.getItem("jbs:lang");
+            return lang === "vi" ? "vi" : "en";
+        } catch (e) {
+            return "en";
+        }
+    }
+
+    function t(key) {
+        var translations = window.JBS_I18N || {};
+        var locale = getLocale();
+        var bucket = translations[locale] || translations.en || {};
+        var parts = key.split(".");
+        var cursor = bucket;
+        for (var i = 0; i < parts.length; i++) {
+            if (cursor == null) return key;
+            cursor = cursor[parts[i]];
+        }
+        return cursor || key;
+    }
+
+    function ensureTranslationsLoaded() {
+        if (window.JBS_I18N) {
+            return Promise.resolve();
+        }
+        var locale = getLocale();
+        return fetch("/api/i18n/" + locale, { credentials: "same-origin" })
+            .then(function (resp) {
+                if (!resp.ok) throw new Error("i18n load failed");
+                return resp.json();
+            })
+            .then(function (data) {
+                window.JBS_I18N = {};
+                window.JBS_I18N[locale] = data;
+            })
+            .catch(function () {
+                window.JBS_I18N = { en: {}, vi: {} };
+            });
+    }
+
+    function escapeHtml(value) {
+        if (value == null) return "";
+        return String(value)
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#39;");
+    }
+
+    function showFilterToast(kind, title, message) {
+        var container = document.getElementById("filter-toast-container");
+        if (!container) return;
+
+        var colorMap = {
+            success: "bg-success text-white",
+            error: "bg-danger text-white",
+            warning: "bg-warning text-dark",
+            info: "bg-info text-white"
+        };
+        var iconMap = {
+            success: "\u2713",
+            error: "\u2715",
+            info: "\u2139",
+            warning: "!"
+        };
+
+        var el = document.createElement("div");
+        el.className = "toast align-items-center " + (colorMap[kind] || colorMap.info) + " border-0 mb-2";
+        el.setAttribute("role", "alert");
+        el.setAttribute("aria-live", "polite");
+        el.innerHTML =
+            '<div class="d-flex">' +
+            '<div class="toast-body">' +
+            "<strong>" + (iconMap[kind] || "") + " " + escapeHtml(title) + "</strong>" +
+            (message ? "<div class=\"small mt-1\">" + escapeHtml(message) + "</div>" : "") +
+            "</div>" +
+            '<button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>' +
+            "</div>";
+
+        container.appendChild(el);
+        var toast = new bootstrap.Toast(el, { delay: kind === "error" ? 8000 : 5000 });
+        toast.show();
+        el.addEventListener("hidden.bs.toast", function () {
+            el.remove();
+        });
+    }
+
     function buildExportUrl(format) {
         var params = new URLSearchParams(window.location.search);
         params.set('format', format);
         return '/api/jobs/export?' + params.toString();
     }
 
-    document.getElementById('export-excel').addEventListener('click', function(e) {
-        e.preventDefault();
-        window.location.href = buildExportUrl('xlsx');
-    });
+    function fetchJobsViaAjax() {
+        var form = document.getElementById("filter-form");
+        if (!form) return;
 
-    document.getElementById('export-csv').addEventListener('click', function(e) {
-        e.preventDefault();
-        window.location.href = buildExportUrl('csv');
-    });
+        var formData = new FormData(form);
+        var params = new URLSearchParams();
+        for (var pair of formData.entries()) {
+            if (pair[1]) {
+                params.append(pair[0], pair[1]);
+            }
+        }
+        params.set("page", "1");
+
+        var applyBtn = document.getElementById("apply-filters-btn");
+        var loadingSpinner = document.getElementById("filter-loading");
+        if (applyBtn) applyBtn.disabled = true;
+        if (loadingSpinner) loadingSpinner.classList.remove("d-none");
+
+        fetch("/api/jobs?" + params.toString(), { credentials: "same-origin" })
+            .then(function(resp) {
+                if (!resp.ok) throw new Error("HTTP " + resp.status);
+                return resp.json();
+            })
+            .then(function(data) {
+                if (data.error) {
+                    showFilterToast("error", t("jobs.filter_error_title"), data.error);
+                    return;
+                }
+                updateJobsTable(data.jobs, data.total_count);
+                updatePagination(data.page, data.total_pages, data.filters);
+
+                // Only show toast if there are active filters
+                var hasActiveFilters = params.toString().replace(/page=1&?/, "").replace(/&$/, "");
+                if (hasActiveFilters) {
+                    showFilterToast("success", t("jobs.filter_applied"), data.total_count + " " + t("jobs.jobs_found"));
+                }
+
+                var newUrl = window.location.pathname + "?" + params.toString();
+                window.history.pushState({}, "", newUrl);
+            })
+            .catch(function(err) {
+                showFilterToast("error", t("jobs.filter_error_title"), err.message);
+            })
+            .finally(function() {
+                if (applyBtn) applyBtn.disabled = false;
+                if (loadingSpinner) loadingSpinner.classList.add("d-none");
+            });
+    }
+
+    function updateJobsTable(jobs, totalCount) {
+        var tbody = document.querySelector("table tbody");
+        if (!tbody) return;
+
+        if (!jobs || jobs.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted py-4">' +
+                escapeHtml(t("jobs.no_jobs")) + '</td></tr>';
+            return;
+        }
+
+        var html = "";
+        for (var i = 0; i < jobs.length; i++) {
+            var job = jobs[i];
+            var statusClass = {
+                "open": "bg-primary",
+                "closed": "bg-secondary",
+                "unknown": "bg-warning text-dark"
+            };
+            var companyName = job.company ? job.company.name : "Unknown";
+            var companySlug = job.company ? job.company.slug : "";
+            var datePosted = job.date_posted ? job.date_posted.split("T")[0] : "-";
+
+            html += '<tr>' +
+                '<td class="align-middle"><a href="' + escapeHtml(job.url) + '" target="_blank" rel="noopener noreferrer">' + escapeHtml(job.title) + '</a></td>' +
+                '<td class="align-middle"><a href="/companies/' + escapeHtml(companySlug) + '">' + escapeHtml(companyName) + '</a></td>' +
+                '<td class="align-middle">' + escapeHtml(job.location || "-") + '</td>' +
+                '<td class="align-middle"><span class="badge ' + (statusClass[job.status] || "bg-secondary") + '">' + escapeHtml(t("status." + (job.status || "unknown"))) + '</span></td>' +
+                '<td class="align-middle">' + escapeHtml(datePosted) + '</td>' +
+                '<td class="align-middle"><a href="' + escapeHtml(job.url) + '" target="_blank" rel="noopener noreferrer" class="btn btn-outline-primary btn-sm">' + escapeHtml(t("common.view")) + '</a></td>' +
+                '</tr>';
+        }
+        tbody.innerHTML = html;
+    }
+
+    function updatePagination(currentPage, totalPages, filters) {
+        var existingNav = document.querySelector("nav[data-i18n-attr]");
+        if (!existingNav) return;
+
+        if (totalPages <= 1) {
+            existingNav.style.display = "none";
+            return;
+        }
+        existingNav.style.display = "";
+
+        var ul = existingNav.querySelector("ul.pagination");
+        if (!ul) return;
+
+        var params = new URLSearchParams();
+        if (filters.company) params.set("company", filters.company);
+        if (filters.status) params.set("status", filters.status);
+        if (filters.date_from) params.set("date_from", filters.date_from);
+        if (filters.date_to) params.set("date_to", filters.date_to);
+
+        var baseParams = params.toString();
+        var pageLink = function(p) {
+            return "/jobs?" + (baseParams ? baseParams + "&" : "") + "page=" + p;
+        };
+
+        var html = "";
+        if (currentPage > 1) {
+            html += '<li class="page-item"><a class="page-link" href="' + pageLink(currentPage - 1) + '">' + escapeHtml(t("common.previous")) + '</a></li>';
+        } else {
+            html += '<li class="page-item disabled"><span class="page-link">' + escapeHtml(t("common.previous")) + '</span></li>';
+        }
+
+        for (var p = 1; p <= totalPages; p++) {
+            if (p === 1 || p === totalPages || (p >= currentPage - 1 && p <= currentPage + 1)) {
+                if (p === currentPage) {
+                    html += '<li class="page-item active"><span class="page-link">' + p + '</span></li>';
+                } else {
+                    html += '<li class="page-item"><a class="page-link" href="' + pageLink(p) + '">' + p + '</a></li>';
+                }
+            } else if (p === 2 || p === totalPages - 1) {
+                html += '<li class="page-item disabled"><span class="page-link">...</span></li>';
+            }
+        }
+
+        if (currentPage < totalPages) {
+            html += '<li class="page-item"><a class="page-link" href="' + pageLink(currentPage + 1) + '">' + escapeHtml(t("common.next")) + '</a></li>';
+        } else {
+            html += '<li class="page-item disabled"><span class="page-link">' + escapeHtml(t("common.next")) + '</span></li>';
+        }
+
+        ul.innerHTML = html;
+    }
+
+    function reloadJobsTable() {
+        var params = new URLSearchParams(window.location.search);
+        if (!params.has("page")) {
+            params.set("page", "1");
+        }
+
+        var applyBtn = document.getElementById("apply-filters-btn");
+        var loadingSpinner = document.getElementById("filter-loading");
+        if (applyBtn) applyBtn.disabled = true;
+        if (loadingSpinner) loadingSpinner.classList.remove("d-none");
+
+        fetch("/api/jobs?" + params.toString(), { credentials: "same-origin" })
+            .then(function(resp) {
+                if (!resp.ok) throw new Error("HTTP " + resp.status);
+                return resp.json();
+            })
+            .then(function(data) {
+                if (data.error) {
+                    showFilterToast("error", t("jobs.filter_error_title"), data.error);
+                    return;
+                }
+                updateJobsTable(data.jobs, data.total_count);
+                updatePagination(data.page, data.total_pages, data.filters);
+            })
+            .catch(function(err) {
+                showFilterToast("error", t("jobs.filter_error_title"), err.message);
+            })
+            .finally(function() {
+                if (applyBtn) applyBtn.disabled = false;
+                if (loadingSpinner) loadingSpinner.classList.add("d-none");
+            });
+    }
+
+    function init() {
+        ensureTranslationsLoaded().then(function() {
+            document.getElementById("export-excel").addEventListener("click", function(e) {
+                e.preventDefault();
+                window.location.href = buildExportUrl("xlsx");
+            });
+
+            document.getElementById("export-csv").addEventListener("click", function(e) {
+                e.preventDefault();
+                window.location.href = buildExportUrl("csv");
+            });
+
+            var filterForm = document.getElementById("filter-form");
+            if (filterForm) {
+                filterForm.addEventListener("submit", function(e) {
+                    e.preventDefault();
+                    fetchJobsViaAjax();
+                });
+            }
+
+            // Listen for scrape-complete event to reload jobs table
+            window.addEventListener("scrape-complete", function(e) {
+                reloadJobsTable();
+            });
+        });
+    }
+
+    if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", init);
+    } else {
+        init();
+    }
 })();
 </script>
 

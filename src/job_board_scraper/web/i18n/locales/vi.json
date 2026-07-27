@@ -87,7 +87,12 @@
     "no_jobs": "Không tìm thấy việc làm phù hợp.",
     "export_excel": "Xuất Excel",
     "export_csv": "Xuất CSV",
-    "export_tooltip": "Xuất danh sách việc làm đã lọc ra file Excel"
+    "export_tooltip": "Xuất danh sách việc làm đã lọc ra file Excel",
+    "filter_applied": "Đã áp dụng bộ lọc",
+    "jobs_found": "việc làm tìm thấy",
+    "filter_error_title": "Lỗi bộ lọc",
+    "scrape_complete": "Đã cào dữ liệu xong",
+    "scrape_complete_body": "Tìm thấy {jobs} việc, {new} mới, {closed} đã đóng"
   },
   "companies": {
     "title": "Tất cả nguồn việc làm đang theo dõi",

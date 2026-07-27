@@ -191,6 +191,46 @@
         });
     }
 
+    function fetchRunDetail(runId) {
+        return fetch("/api/runs/" + runId, { credentials: "same-origin" })
+            .then(function (r) {
+                if (!r.ok) throw new Error("run detail fetch failed");
+                return r.json();
+            });
+    }
+
+    function refreshDashboardStats() {
+        return fetch("/api/stats", { credentials: "same-origin" })
+            .then(function (r) {
+                if (!r.ok) throw new Error("stats fetch failed");
+                return r.json();
+            })
+            .then(function (stats) {
+                // Update stat cards
+                var totalJobsEl = document.querySelector("[data-stat='total_jobs']");
+                if (totalJobsEl) totalJobsEl.textContent = stats.total_jobs;
+
+                var openJobsEl = document.querySelector("[data-stat='open_jobs']");
+                if (openJobsEl) openJobsEl.textContent = stats.open_jobs;
+
+                var totalRunsEl = document.querySelector("[data-stat='total_runs']");
+                if (totalRunsEl) totalRunsEl.textContent = stats.total_runs;
+            })
+            .catch(function () {
+                // Silent fail for stats refresh
+            });
+    }
+
+    function formatMessage(template, values) {
+        var result = template;
+        for (var key in values) {
+            if (values.hasOwnProperty(key)) {
+                result = result.replace("{" + key + "}", values[key]);
+            }
+        }
+        return result;
+    }
+
     function runScrape(button) {
         var scope = button.getAttribute("data-scrape-scope") || "all";
         var payload = {};
@@ -225,11 +265,58 @@
                     });
                 })
                 .then(function (data) {
-                    showToast(
-                        "success",
-                        t("scrape.success"),
-                        "#" + data.run_id
-                    );
+                    // Fetch run details for job counts
+                    return fetchRunDetail(data.run_id)
+                        .then(function (runDetail) {
+                            return { runData: data, runDetail: runDetail };
+                        })
+                        .catch(function () {
+                            return { runData: data, runDetail: null };
+                        });
+                })
+                .then(function (result) {
+                    var runDetail = result.runDetail;
+                    var runId = result.runData.run_id;
+
+                    // Build success message with job counts
+                    var bodyMessage = "#" + runId;
+                    if (runDetail) {
+                        var jobsFound = runDetail.jobs_found || 0;
+                        var newJobs = runDetail.new_jobs || 0;
+                        var closedJobs = runDetail.closed_jobs || 0;
+                        bodyMessage = formatMessage(t("jobs.scrape_complete_body"), {
+                            jobs: jobsFound,
+                            new: newJobs,
+                            closed: closedJobs
+                        });
+                    }
+
+                    showToast("success", t("scrape.success"), bodyMessage);
+
+                    // Refresh dashboard stats if on dashboard
+                    if (window.location.pathname === "/" || window.location.pathname === "/dashboard") {
+                        refreshDashboardStats();
+                    }
+
+                    // If on jobs page, reload the jobs table via AJAX
+                    if (window.location.pathname === "/jobs") {
+                        // Dispatch event for jobs.html to handle
+                        window.dispatchEvent(new CustomEvent("scrape-complete", {
+                            detail: { runId: runId, runDetail: runDetail }
+                        }));
+                    }
+
+                    // If on runs page, dispatch event for reload
+                    if (window.location.pathname === "/runs") {
+                        window.dispatchEvent(new CustomEvent("runs-updated"));
+                    }
+
+                    // If on company detail page, dispatch event for reload
+                    if (window.location.pathname.startsWith("/companies/")) {
+                        window.dispatchEvent(new CustomEvent("company-updated", {
+                            detail: { runId: runId, runDetail: runDetail }
+                        }));
+                    }
                 })
                 .catch(function (err) {
                     if (err && err.isConflict) {

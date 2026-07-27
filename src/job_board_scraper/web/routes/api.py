@@ -419,6 +419,73 @@ async def get_companies(
         }
 
 
+@router.get("/companies/{slug}")
+async def get_company_detail(slug: str) -> dict[str, Any]:
+    """Get detailed info for a specific company including stats and recent attempts."""
+    async with session_scope() as session:
+        # Get the company
+        result = await session.execute(select(Company).where(Company.slug == slug))
+        company = result.scalar_one_or_none()
+
+        if not company:
+            return {"error": "Company not found"}
+
+        # Get total jobs
+        total_jobs = await session.scalar(
+            select(func.count(Job.id)).where(Job.company_id == company.id)
+        ) or 0
+
+        # Get open jobs
+        open_jobs = await session.scalar(
+            select(func.count(Job.id))
+            .where(Job.company_id == company.id)
+            .where(Job.status == JobStatus.open.value)
+        ) or 0
+
+        # Get closed jobs
+        closed_jobs = await session.scalar(
+            select(func.count(Job.id))
+            .where(Job.company_id == company.id)
+            .where(Job.status == JobStatus.closed.value)
+        ) or 0
+
+        # Get recent attempts
+        result = await session.execute(
+            select(ScrapeAttempt)
+            .where(ScrapeAttempt.company_id == company.id)
+            .order_by(ScrapeAttempt.started_at.desc())
+            .limit(10)
+        )
+        attempts = list(result.scalars().all())
+
+        return {
+            "id": company.id,
+            "name": company.name,
+            "slug": company.slug,
+            "adapter_type": company.adapter_type,
+            "base_url": company.base_url,
+            "is_active": company.is_active,
+            "total_jobs": total_jobs,
+            "open_jobs": open_jobs,
+            "closed_jobs": closed_jobs,
+            "attempts": [
+                {
+                    "id": a.id,
+                    "run_id": a.run_id,
+                    "status": a.status,
+                    "jobs_found": a.jobs_found,
+                    "new_jobs": a.new_jobs,
+                    "closed_jobs": a.closed_jobs,
+                    "duration_seconds": a.duration_seconds,
+                    "error_type": a.error_type,
+                    "error_message": a.error_message,
+                    "started_at": a.started_at.isoformat() if a.started_at else None,
+                }
+                for a in attempts
+            ],
+        }
+
+
 async def _get_run_totals(session: AsyncSession, run_id: int) -> dict[str, int]:
     """Get aggregate totals for a run from its attempts."""
     result = await session.execute(

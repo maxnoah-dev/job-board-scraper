@@ -87,7 +87,12 @@
     "no_jobs": "No jobs found matching your criteria.",
     "export_excel": "Export Excel",
     "export_csv": "Export CSV",
-    "export_tooltip": "Export filtered jobs to Excel file"
+    "export_tooltip": "Export filtered jobs to Excel file",
+    "filter_applied": "Filters applied",
+    "jobs_found": "jobs found",
+    "filter_error_title": "Filter Error",
+    "scrape_complete": "Scrape completed",
+    "scrape_complete_body": "Found {jobs} jobs, {new} new, {closed} closed"
   },
   "companies": {
     "title": "All job sources being tracked",
