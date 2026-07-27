@@ -84,7 +84,10 @@
     "col_company": "Company",
     "col_location": "Location",
     "col_date_posted": "Date Posted",
-    "no_jobs": "No jobs found matching your criteria."
+    "no_jobs": "No jobs found matching your criteria.",
+    "export_excel": "Export Excel",
+    "export_csv": "Export CSV",
+    "export_tooltip": "Export filtered jobs to Excel file"
   },
   "companies": {
     "title": "All job sources being tracked",

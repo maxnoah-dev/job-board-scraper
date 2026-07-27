@@ -84,7 +84,10 @@
     "col_company": "Công ty",
     "col_location": "Địa điểm",
     "col_date_posted": "Ngày đăng",
-    "no_jobs": "Không tìm thấy việc làm phù hợp."
+    "no_jobs": "Không tìm thấy việc làm phù hợp.",
+    "export_excel": "Xuất Excel",
+    "export_csv": "Xuất CSV",
+    "export_tooltip": "Xuất danh sách việc làm đã lọc ra file Excel"
   },
   "companies": {
     "title": "Tất cả nguồn việc làm đang theo dõi",

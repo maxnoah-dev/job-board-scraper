@@ -12,6 +12,17 @@
 
 <!-- Filters -->
 <div class="card border-0 shadow-sm mb-4">
+    <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+        <h5 class="mb-0 text-gray-800"><span data-i18n="jobs.filter_header">{{ t('jobs.filter_header') | default('Filters') }}</span></h5>
+        <div class="btn-group" role="group" aria-label="Export options">
+            <a href="#" class="btn btn-outline-success btn-sm" id="export-excel" title="{{ t('jobs.export_tooltip') }}" data-i18n="title:jobs.export_tooltip">
+                <i class="bi bi-file-earmark-excel me-1"></i><span data-i18n="jobs.export_excel">{{ t('jobs.export_excel') }}</span>
+            </a>
+            <a href="#" class="btn btn-outline-success btn-sm" id="export-csv" title="{{ t('jobs.export_tooltip') }}" data-i18n="title:jobs.export_tooltip">
+                <i class="bi bi-file-earmark-spreadsheet me-1"></i><span data-i18n="jobs.export_csv">{{ t('jobs.export_csv') }}</span>
+            </a>
+        </div>
+    </div>
     <div class="card-body">
         <form method="get" action="{{ url_for('list_jobs') }}" id="filter-form">
             <div class="row g-3">
@@ -53,6 +64,26 @@
         </form>
     </div>
 </div>
+
+<script>
+(function() {
+    function buildExportUrl(format) {
+        var params = new URLSearchParams(window.location.search);
+        params.set('format', format);
+        return '/api/jobs/export?' + params.toString();
+    }
+
+    document.getElementById('export-excel').addEventListener('click', function(e) {
+        e.preventDefault();
+        window.location.href = buildExportUrl('xlsx');
+    });
+
+    document.getElementById('export-csv').addEventListener('click', function(e) {
+        e.preventDefault();
+        window.location.href = buildExportUrl('csv');
+    });
+})();
+</script>
 
 <!-- Results -->
 <div class="card border-0 shadow-sm">

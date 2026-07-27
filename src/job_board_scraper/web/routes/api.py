@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import date
 from typing import Any
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Response
 from pydantic import BaseModel, Field
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -437,3 +437,135 @@ async def _get_run_totals(session: AsyncSession, run_id: int) -> dict[str, int]:
         "closed_jobs": int(row[2]),
         "failed": int(row[3]),
     }
+
+
+@router.get("/jobs/export", name="api_export_jobs")
+async def export_jobs(
+    company: str | None = Query(None),
+    status: str | None = Query(None),
+    date_from: date | None = Query(None),
+    date_to: date | None = Query(None),
+    export_format: str = Query("xlsx", alias="format"),
+) -> Response:
+    """Export filtered jobs as a downloadable file.
+
+    Returns an Excel (.xlsx) or CSV file with the same column layout as
+    the CLI ``export-xlsx`` command (17 columns matching the Vietnamese
+    job-application template).
+
+    Query parameters mirror the list-jobs filters so the export always
+    reflects the current filter state.
+    """
+    from datetime import datetime
+
+    from job_board_scraper.reporting.excel_exporter import (
+        COLUMNS,
+        ExcelExporter,
+        ExcelExportOptions,
+    )
+
+    async with session_scope() as session:
+        # Build the same filter logic as get_jobs()
+        query = (
+            select(Job)
+            .join(Company, Job.company_id == Company.id)
+            .options(selectinload(Job.company))
+        )
+
+        if company:
+            company_obj = await session.scalar(
+                select(Company).where(Company.slug == company)
+            )
+            if company_obj:
+                query = query.where(Job.company_id == company_obj.id)
+
+        if status and status in [s.value for s in JobStatus]:
+            query = query.where(Job.status == status)
+
+        if date_from:
+            query = query.where(Job.date_posted >= date_from)
+
+        if date_to:
+            query = query.where(Job.date_posted <= date_to)
+
+        result = await session.execute(
+            query.order_by(Job.date_posted.desc().nullslast())
+        )
+        jobs = list(result.scalars().all())
+
+        # Convert ORM objects to the dict shape ExcelExporter expects
+        jobs_data: list[dict[str, Any]] = []
+        for job in jobs:
+            raw_data: dict[str, Any] = {}
+            if job.raw_data:
+                try:
+                    raw_data = job.raw_data if isinstance(job.raw_data, dict) else {}
+                except Exception:
+                    raw_data = {}
+            jobs_data.append(
+                {
+                    "id": job.id,
+                    "title": job.title,
+                    "url": job.url or "",
+                    "location": job.location,
+                    "company_name": job.company.name if job.company else "Unknown",
+                    "company_slug": job.company.slug if job.company else "",
+                    "status": job.status,
+                    "date_posted": job.date_posted,
+                    "raw_data": raw_data,
+                    "salary_raw": getattr(job, "salary_raw", None),
+                    "title_vi": getattr(job, "title_vi", None),
+                }
+            )
+
+    if export_format == "csv":
+        import csv
+        import io
+
+        output = io.StringIO()
+        writer = csv.writer(output)
+        writer.writerow(COLUMNS)
+        for job in jobs_data:
+            row = ExcelExporter._job_to_row(job, ExcelExportOptions())
+            writer.writerow(row)
+
+        output.seek(0)
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        filename = f"jobs_export_{timestamp}.csv"
+        # UTF-8 BOM ensures Excel displays Vietnamese characters correctly
+        csv_content = "\ufeff" + output.getvalue()
+        return Response(
+            content=csv_content.encode("utf-8-sig"),
+            media_type="text/csv",
+            headers={
+                "Content-Disposition": f'attachment; filename="{filename}"',
+                "Content-Type": "text/csv; charset=utf-8-sig",
+            },
+        )
+
+    # Excel export — save to /app/data/ (writable by the scraper user)
+    from pathlib import Path
+
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    filename = f"jobs_export_{timestamp}.xlsx"
+    output_path = Path("/app/data") / filename
+
+    exporter = ExcelExporter(output_path=output_path)
+    await exporter.export(
+        jobs=jobs_data,
+        options=ExcelExportOptions(sheet_name="From Scraper"),
+    )
+
+    with output_path.open("rb") as f:
+        content = f.read()
+
+    # Clean up after sending
+    output_path.unlink(missing_ok=True)
+
+    return Response(
+        content=content,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={
+            "Content-Disposition": f'attachment; filename="{filename}"',
+        },
+    )
